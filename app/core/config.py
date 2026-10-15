@@ -3,8 +3,10 @@ from pydantic import SecretStr #Access the actual value via settings.SECRET_KEY.
 
 class Settings(BaseSettings):
     DATABASE_URL: str
-    REDIS_URL: str
+    REDIS_URL: str | None = None
     SECRET_KEY: SecretStr
     STRIPE_SECRET_KEY: SecretStr
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")   
+
+settings = Settings()
