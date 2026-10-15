@@ -44,7 +44,7 @@
 - id (pk , int)
 - product_id	(FK -> products)
 - Order_id(fk -> orders.id)
-- qunatity (int)
+- quantity (int)
 - price (decimal) 
 - created_at (timestamp)
 
