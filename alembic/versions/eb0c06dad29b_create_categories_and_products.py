@@ -58,6 +58,5 @@ def downgrade() -> None:
     op.drop_index('idx_products_category', table_name='products')
     op.drop_index('idx_products_active', table_name='products')
     op.drop_table('products')
-    op.drop_index('uq_carts_user_product', table_name='carts', postgresql_where=sa.text("status = 'active'"))
     op.drop_table('categories')
     # ### end Alembic commands ###
