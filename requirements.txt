@@ -3,7 +3,6 @@ uvicorn[standard]
 sqlalchemy[asyncio]
 alembic
 asyncpg
-psycopg2-binary
 pydantic-settings
 python-dotenv
 python-multipart

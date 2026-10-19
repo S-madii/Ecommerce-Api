@@ -7,3 +7,5 @@ __pycache__/
 .mypy_cache/
 playground.py
 .idea/
+claude.md
+.todo
