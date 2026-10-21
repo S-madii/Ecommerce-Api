@@ -31,7 +31,6 @@ class Product(Base):
     category: Mapped["Category | None"] = relationship(back_populates="products")
 
     __table_args__ = (
-
         CheckConstraint("LENGTH(TRIM(name)) > 0", name="chk_products_name"),
         CheckConstraint("stock >= 0", name="chk_products_stock"),
         CheckConstraint("price >= 0", name="chk_products_price"),
