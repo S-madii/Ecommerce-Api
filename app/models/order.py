@@ -1,13 +1,26 @@
-from decimal import Decimal
-from typing import Dict, Any
-
-from sqlalchemy import CheckConstraint, CHAR,Uuid, ForeignKey, Index, BigInteger, DateTime, String, func, Identity, text, Numeric
-from sqlalchemy.dialects.postgresql import JSONB
-from datetime import datetime
-from sqlalchemy.orm import Mapped, mapped_column, relationship
 import uuid
-from app.db.base import Base
+from datetime import datetime
+from decimal import Decimal
+from typing import Any, Dict
 
+from sqlalchemy import (
+    CHAR,
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    Numeric,
+    String,
+    Uuid,
+    func,
+    text,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db import Base
 class Order(Base):
     __tablename__ = "orders"
 

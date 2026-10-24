@@ -22,3 +22,7 @@ SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as session:
         yield session
+        # session is automatically closed when the context manager exits
+        # This is because the `async with` statement ensures that the `__aexit__` method is called,
+        # which in turn calls the `close()` method on the session.
+        # How? : The `async with` statement is a context manager that automatically calls the `__aenter__` method when entering the context and the `__aexit__` method when exiting the context. The `__aexit__` method is responsible for cleaning up the resources, in this case, closing the session.

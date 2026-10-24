@@ -1,8 +1,9 @@
-from sqlalchemy import BigInteger, DateTime, String, func, Identity, CheckConstraint
 from datetime import datetime
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from app.db.base import Base
 
+from sqlalchemy import BigInteger, CheckConstraint, DateTime, Identity, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db import Base
 
 class Category(Base):
     __tablename__ = "categories"

@@ -1,11 +1,22 @@
+from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, Index, BigInteger, Boolean, Numeric,DateTime, String, func, Identity, CheckConstraint, Text
-from datetime import datetime
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    Numeric,
+    String,
+    Text,
+    func,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
-
+from app.db import Base
 
 class Product(Base):
     __tablename__ = "products"

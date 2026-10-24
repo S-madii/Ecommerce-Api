@@ -1,8 +1,20 @@
-from sqlalchemy import ForeignKey, Index, BigInteger, DateTime, String, func, Identity, text, UniqueConstraint, CheckConstraint
 from datetime import datetime
+
+from sqlalchemy import (
+    BigInteger,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    String,
+    UniqueConstraint,
+    func,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base
+from app.db import Base
 
 class Cart(Base):
     __tablename__ = "carts"
