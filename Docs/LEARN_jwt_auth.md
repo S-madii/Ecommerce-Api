@@ -61,9 +61,12 @@ A password hash is a one-way transformation with a random salt built in. You sto
 If the database leaks, plain passwords leak with it, and users reuse passwords across sites. A hash limits the damage. Use a slow, purpose-built algorithm like bcrypt or argon2, not SHA-256.
 
 ### HOW IT WORKS
-Your `requirements.txt` includes `passlib[bcrypt]`. Be aware that passlib is largely unmaintained and has known incompatibilities with recent `bcrypt` releases. If you see errors like `module 'bcrypt' has no attribute '__about__'`, the fix is to pin `bcrypt` to a version passlib supports, or to use `bcrypt` directly. Tell me which one you choose; both work.
+We use the `bcrypt` library directly, with no passlib layer. You need two calls:
 
-Two functions do the job: one to hash a plain password on signup, one to verify it on login.
+- `bcrypt.hashpw(password_bytes, bcrypt.gensalt())` on signup. It returns bytes, so store `.decode()` in `password_hash`.
+- `bcrypt.checkpw(password_bytes, hash_bytes)` on login. Both arguments must be bytes.
+
+Passwords must be encoded to bytes first (`.encode("utf-8")`). Note bcrypt only uses the first 72 bytes of a password.
 
 ### YOUR PROJECT
 Your `User.password_hash` column is `String(255)`. That's enough for a bcrypt hash, so no schema change is needed.
@@ -109,7 +112,7 @@ sequenceDiagram
 - A token that's expired or has a bad signature raises an error when decoded. Your code must catch that and return 401.
 
 ### YOUR PROJECT
-`requirements.txt` includes `python-jose[cryptography]`, so use `jose.jwt` for encode and decode.
+We use `PyJWT`. Import it as `import jwt`. Use `jwt.encode(payload, key, algorithm="HS256")` and `jwt.decode(token, key, algorithms=["HS256"])`. A bad or expired token raises `jwt.InvalidTokenError` (which includes `jwt.ExpiredSignatureError`), so catch that and return 401.
 
 ---
 

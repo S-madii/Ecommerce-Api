@@ -4,11 +4,13 @@ sqlalchemy[asyncio]
 alembic
 asyncpg
 pydantic-settings
+email-validator
 python-dotenv
 python-multipart
-passlib[bcrypt]
-python-jose[cryptography]
+bcrypt
+pyjwt
 redis
 celery
 stripe
 httpx
+pydantic

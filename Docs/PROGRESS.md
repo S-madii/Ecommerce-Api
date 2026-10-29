@@ -13,7 +13,7 @@ Last updated: 2026-10-23. Source of truth for the plan: Roadmap v3 (outputs/Road
   - Done: `GET /users/{user_id}` uses `select(User)` and returns only `id`, `email`, `created_at`. The user confirmed 200 for an existing user and 404 for a missing one.
   - Not started: `BaseModel` schemas, signup, login, `/auth/me`.
   - Teaching doc written: `Docs/LEARN_jwt_auth.md`.
-  - Pending user decisions: which fix for the `passlib` and `bcrypt` incompatibility, and whether to keep `python-jose` or switch to `PyJWT`.
+  - Decided: use `bcrypt` directly (no passlib), and `PyJWT` (no python-jose). requirements.txt updated.
 
 ## Files
 
@@ -28,8 +28,6 @@ Last updated: 2026-10-23. Source of truth for the plan: Roadmap v3 (outputs/Road
 ## Open items
 
 - A4: write schemas, signup, login, `/auth/me`, and include the router in `main.py`.
-- `passlib` and `bcrypt` version fix.
-- `python-jose` or `PyJWT` decision.
 - Track B Stage 1 (freelance profiles): status unknown. Ask before assuming.
 - Track C (reading and math habit): not started as far as we've discussed.
 
@@ -52,4 +50,4 @@ Last updated: 2026-10-23. Source of truth for the plan: Roadmap v3 (outputs/Road
 
 ## Next step
 
-Ask the user which passlib and bcrypt fix and which JWT library they want. Then start the `BaseModel` schemas in `app/schemas/user.py`.
+Start the `BaseModel` schemas in `app/schemas/user.py`, then signup, login, and `/auth/me`.
