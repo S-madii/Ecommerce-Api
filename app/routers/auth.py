@@ -5,10 +5,12 @@ from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import create_access_token
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, Token
 
+DUMMY_HASH = hashpw(b"dummy_password", gensalt())
 router = APIRouter()
 
 
@@ -30,5 +32,10 @@ async def signup(user: UserCreate, db: AsyncSession = Depends(get_db)):
 async def login(user: UserCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(func.lower(User.email) == user.email.lower()))
     user_db = result.scalar_one_or_none()
-    if user_db is None or not checkpw(user.password.encode('utf-8'), user_db.password_hash.encode('utf-8')):
+    if user_db is None:
+        checkpw(user.password.encode('utf-8'), DUMMY_HASH)
         raise HTTPException(status_code=401, detail="No such user or incorrect password")
+    if not checkpw(user.password.encode('utf-8'), user_db.password_hash.encode('utf-8')):
+        raise HTTPException(status_code=401, detail="No such user or incorrect password")
+    token = create_access_token(user_db.id)
+    return Token(access_token=token, token_type="bearer")
