@@ -5,7 +5,7 @@ from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import create_access_token
+from app.core.security import create_access_token, get_current_user
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.user import UserCreate, UserRead, Token
@@ -39,3 +39,8 @@ async def login(user: UserCreate, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=401, detail="No such user or incorrect password")
     token = create_access_token(user_db.id)
     return Token(access_token=token, token_type="bearer")
+
+
+@router.get("/me", response_model=UserRead)
+async def read_current_user(current_user: User = Depends(get_current_user)):
+    return current_user
