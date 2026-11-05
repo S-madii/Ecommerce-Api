@@ -1,7 +1,6 @@
 # PROGRESS: commerce-api
 
-Last updated: 2026-10-23. Source of truth for the plan: Roadmap v3 (outputs/Roadmap_v3_Styled.pdf). Update this file
-only when asked.
+Last updated: 2026-11-04. Source of truth for the plan: Roadmap v4. Update this file only when asked.
 
 ---
 
@@ -9,28 +8,25 @@ only when asked.
 
 - **A1 Setup:** done.
 - **A2 Schema design:** done. Reference is `Docs/schema.sql`.
-- **A3 Database layer:** done per the user. All 9 tables exist in Postgres. Rollback round trip tested. Migrations
-  `c9559598e2dd`, `eb0c06dad29b`, `e97321227f27`, `e4cdc75b1de7` applied, head is `e4cdc75b1de7`.
-- **A4 JWT authentication:** done. Pydantic schemas, password hashing, JWT, and `/auth/me` are in
-  `Docs/LEARN_jwt_auth.md`.
+- **A3 Database layer:** done. All 9 tables exist in Postgres. Rollback round trip tested. Head revision is `e4cdc75b1de7`.
+- **A4 JWT authentication:** done. Verified signup (201 & 409), login returning JWT token, and `/auth/me` with Bearer auth (200 & 401).
+- **A5 Product & Category Catalog:** in progress. Writing schemas in `app/schemas/category.py` and `app/schemas/product.py`.
 
 ## Files
 
-- `app/main.py`: `/health`, `/health/db`, `/users/{user_id}`.
-- `app/schemas/`: empty, only `__init__.py`.
-- `app/routers/`: empty, only `__init__.py`.
+- `app/main.py`: `/health`, `/health/db`, `/users/{user_id}`, includes `auth_router`.
+- `app/schemas/`: `user.py` (UserCreate, UserRead, Token), `category.py`, `product.py`.
+- `app/routers/`: `auth.py` (signup, login, me).
+- `app/core/`: `config.py` (Settings), `security.py` (create_access_token, get_current_user).
 - `app/models/`: user, category, product, cart (Cart and CartItem), order (Order, OrderItem, Payment).
-- `app/core/config.py`: `SECRET_KEY` and `STRIPE_SECRET_KEY` are `SecretStr`. Add `ACCESS_TOKEN_EXPIRE_MINUTES` when JWT
-  starts.
 - `app/db/session.py`: `echo=True`, `expire_on_commit=False`, `get_db` dependency.
-- `playground.py`: runs and cleans up after itself. The user says it's done. The category-first delete order is not in
-  the file. Only mention this if the user raises it again.
+- `playground.py`: scratch script, done.
 
 ## Open items
 
-- A4: write schemas, signup, login, `/auth/me`, and include the router in `main.py`.
-- Track B Stage 1 (freelance profiles): status unknown. Ask before assuming.
-- Track C (reading and math habit): not started as far as we've discussed.
+- A5: Category & Product CRUD routes, pagination, public vs auth protection.
+- Track B Stage 1 (freelance profiles): lead declined, in progress.
+- Track C (reading and math habit): low intensity.
 
 ## Working agreements
 
@@ -44,11 +40,12 @@ only when asked.
 ## Docs in the repo
 
 - `Docs/LEARN_sqlalchemy_alembic.md`: Part 6 guide.
-- `Docs/FastApi_Async_Foundation.md`: the user's FastAPI and async doc, renamed from the one I wrote.
+- `Docs/FastApi_Async_Foundation.md`: FastAPI and async doc.
 - `Docs/LEARN_jwt_auth.md`: Pydantic schemas, password hashing, JWT.
+- `Docs/LEARN_catalog.md`: Catalog guide.
 - `Docs/schema.sql`: database design reference.
 - `Docs/Schema.jpg`: ERD image.
 
 ## Next step
 
-Start the `BaseModel` schemas in `app/schemas/user.py`, then signup, login, and `/auth/me`.
+Finish `app/schemas/category.py` and `app/schemas/product.py`, then build category router.
