@@ -1,6 +1,6 @@
 # PROGRESS: commerce-api
 
-Last updated: 2026-11-04. Source of truth for the plan: Roadmap v4. Update this file only when asked.
+Last updated: 2026-11-05. Source of truth for the plan: Roadmap v4. Update this file only when asked.
 
 ---
 
@@ -10,21 +10,22 @@ Last updated: 2026-11-04. Source of truth for the plan: Roadmap v4. Update this 
 - **A2 Schema design:** done. Reference is `Docs/schema.sql`.
 - **A3 Database layer:** done. All 9 tables exist in Postgres. Rollback round trip tested. Head revision is `e4cdc75b1de7`.
 - **A4 JWT authentication:** done. Verified signup (201 & 409), login returning JWT token, and `/auth/me` with Bearer auth (200 & 401).
-- **A5 Product & Category Catalog:** in progress. Writing schemas in `app/schemas/category.py` and `app/schemas/product.py`.
+- **A5 Product & Category Catalog:** done. Schemas, `categories.py` (POST, GET), `products.py` (POST, GET with filters/pagination, GET /{id}), eager loading via `selectinload` verified.
+- **A6 Cart & Concurrency:** in progress.
 
 ## Files
 
-- `app/main.py`: `/health`, `/health/db`, `/users/{user_id}`, includes `auth_router`.
-- `app/schemas/`: `user.py` (UserCreate, UserRead, Token), `category.py`, `product.py`.
-- `app/routers/`: `auth.py` (signup, login, me).
-- `app/core/`: `config.py` (Settings), `security.py` (create_access_token, get_current_user).
+- `app/main.py`: `/health`, `/health/db`, `/users/{user_id}`, includes `auth_router`, `category_router`, `product_router`.
+- `app/schemas/`: `user.py`, `category.py`, `product.py`.
+- `app/routers/`: `auth.py`, `categories.py`, `products.py`.
+- `app/core/`: `config.py` (Settings), `security.py` (create_access_token, get_current_user), `exceptions.py` (AppHTTPError, NotFoundError).
 - `app/models/`: user, category, product, cart (Cart and CartItem), order (Order, OrderItem, Payment).
 - `app/db/session.py`: `echo=True`, `expire_on_commit=False`, `get_db` dependency.
 - `playground.py`: scratch script, done.
 
 ## Open items
 
-- A5: Category & Product CRUD routes, pagination, public vs auth protection.
+- A6: Cart management (add/update/delete items) and checkout with concurrency lock (`with_for_update`).
 - Track B Stage 1 (freelance profiles): lead declined, in progress.
 - Track C (reading and math habit): low intensity.
 
@@ -48,4 +49,4 @@ Last updated: 2026-11-04. Source of truth for the plan: Roadmap v4. Update this 
 
 ## Next step
 
-Finish `app/schemas/category.py` and `app/schemas/product.py`, then build category router.
+Create `app/schemas/cart.py`, then build `app/routers/cart.py` (GET /cart, POST /cart/items).
