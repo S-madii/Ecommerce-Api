@@ -1,6 +1,6 @@
 # PROGRESS: commerce-api
 
-Last updated: 2026-11-05. Source of truth for the plan: Roadmap v4. Update this file only when asked.
+Last updated: 2026-11-09. Source of truth for the plan: Roadmap v4. Update this file only when asked.
 
 ---
 
@@ -10,8 +10,8 @@ Last updated: 2026-11-05. Source of truth for the plan: Roadmap v4. Update this 
 - **A2 Schema design:** done. Reference is `Docs/schema.sql`.
 - **A3 Database layer:** done. All 9 tables exist in Postgres. Rollback round trip tested. Head revision is `e4cdc75b1de7`.
 - **A4 JWT authentication:** done. Verified signup (201 & 409), login returning JWT token, and `/auth/me` with Bearer auth (200 & 401).
-- **A5 Product & Category Catalog:** done. Schemas, `categories.py` (POST, GET), `products.py` (POST, GET with filters/pagination, GET /{id}), eager loading via `selectinload` verified.
-- **A6 Cart & Concurrency:** in progress.
+- **A5 Product & Category Catalog:** done 100%. Categories (create, read), Products (create with category validation and SKU conflict, read detail with `selectinload`, dynamic multi-filter with `q` autoescaping, price bounds, category, safe whitelist sorting with tiebreaker, and `ProductList` envelope with total count).
+- **A6 Cart & Concurrency:** next up.
 
 ## Files
 
@@ -25,7 +25,7 @@ Last updated: 2026-11-05. Source of truth for the plan: Roadmap v4. Update this 
 
 ## Open items
 
-- A6: Cart management (add/update/delete items) and checkout with concurrency lock (`with_for_update`).
+- A6: Cart schemas (`app/schemas/cart.py`), cart operations (add/update/remove items), and checkout transaction with concurrency row locking (`with_for_update`).
 - Track B Stage 1 (freelance profiles): lead declined, in progress.
 - Track C (reading and math habit): low intensity.
 
@@ -44,9 +44,10 @@ Last updated: 2026-11-05. Source of truth for the plan: Roadmap v4. Update this 
 - `Docs/FastApi_Async_Foundation.md`: FastAPI and async doc.
 - `Docs/LEARN_jwt_auth.md`: Pydantic schemas, password hashing, JWT.
 - `Docs/LEARN_catalog.md`: Catalog guide.
+- `Docs/SKILL.md`: Comprehensive cheat sheet & reference for all concepts learned so far.
 - `Docs/schema.sql`: database design reference.
 - `Docs/Schema.jpg`: ERD image.
 
 ## Next step
 
-Create `app/schemas/cart.py`, then build `app/routers/cart.py` (GET /cart, POST /cart/items).
+Create `app/schemas/cart.py` (CartItemCreate, CartItemRead, CartRead), then build `app/routers/cart.py`.

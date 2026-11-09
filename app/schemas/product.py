@@ -29,3 +29,10 @@ class ProductRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     category: "CategoryRead | None" = None
+
+
+class ProductList(BaseModel):
+    items: list[ProductRead]
+    total: int
+    limit: int
+    offset: int
