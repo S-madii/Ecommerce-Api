@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from app.core.exceptions import NotFoundError
-from sqlalchemy import select, func
+from decimal import Decimal
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from app.schemas.product import ProductCreate, ProductRead, ProductList
-from app.models import Product, Category, User
-from decimal import Decimal
-from app.db.session import get_db
+
+from app.core import NotFoundError
 from app.core.security import get_current_user
-from typing import Literal
+from app.db import get_db
+from app.models import Category, Product, User
+from app.schemas import ProductCreate, ProductList, ProductRead
 
 router = APIRouter()
 
@@ -65,7 +67,12 @@ async def read_products(limit: int = Query(default=20, ge=1, le=100),
         limit).offset(offset)
     result = await db.execute(query)
     products = result.scalars().all()
-    return ProductList(items=products, total=total, limit=limit, offset=offset)
+    return ProductList(
+        items=[ProductRead.model_validate(p) for p in products],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{product_id}", response_model=ProductRead)

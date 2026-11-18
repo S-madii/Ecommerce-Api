@@ -1,6 +1,6 @@
 # PROGRESS: commerce-api
 
-Last updated: 2026-11-09. Source of truth for the plan: Roadmap v4. Update this file only when asked.
+Last updated: 2026-11-18. Source of truth for the plan: Roadmap v4. Update this file only when asked.
 
 ---
 
@@ -11,13 +11,14 @@ Last updated: 2026-11-09. Source of truth for the plan: Roadmap v4. Update this 
 - **A3 Database layer:** done. All 9 tables exist in Postgres. Rollback round trip tested. Head revision is `e4cdc75b1de7`.
 - **A4 JWT authentication:** done. Verified signup (201 & 409), login returning JWT token, and `/auth/me` with Bearer auth (200 & 401).
 - **A5 Product & Category Catalog:** done 100%. Categories (create, read), Products (create with category validation and SKU conflict, read detail with `selectinload`, dynamic multi-filter with `q` autoescaping, price bounds, category, safe whitelist sorting with tiebreaker, and `ProductList` envelope with total count).
-- **A6 Cart & Concurrency:** next up.
+- **A6 Cart & Concurrency:** done 100%. Cart schemas, active cart session management, add/update/delete cart items, and POST /orders/checkout with deterministic deadlock-free row-level locking (`with_for_update`), atomic stock deduction, frozen price snapshotting in `order_items`, and cart status conversion.
+- **A7 Stripe Payments (Test mode only):** next up.
 
 ## Files
 
-- `app/main.py`: `/health`, `/health/db`, `/users/{user_id}`, includes `auth_router`, `category_router`, `product_router`.
-- `app/schemas/`: `user.py`, `category.py`, `product.py`.
-- `app/routers/`: `auth.py`, `categories.py`, `products.py`.
+- `app/main.py`: `/health`, `/health/db`, `/users/{user_id}`, mounts central `api_router`.
+- `app/schemas/`: `user.py`, `category.py`, `product.py`, `cart.py`, `order.py`.
+- `app/routers/`: `auth.py`, `categories.py`, `products.py`, `cart.py`, `orders.py`, with central aggregation in `app/routers/__init__.py`.
 - `app/core/`: `config.py` (Settings), `security.py` (create_access_token, get_current_user), `exceptions.py` (AppHTTPError, NotFoundError).
 - `app/models/`: user, category, product, cart (Cart and CartItem), order (Order, OrderItem, Payment).
 - `app/db/session.py`: `echo=True`, `expire_on_commit=False`, `get_db` dependency.
@@ -25,8 +26,8 @@ Last updated: 2026-11-09. Source of truth for the plan: Roadmap v4. Update this 
 
 ## Open items
 
-- A6: Cart schemas (`app/schemas/cart.py`), cart operations (add/update/remove items), and checkout transaction with concurrency row locking (`with_for_update`).
-- Track B Stage 1 (freelance profiles): lead declined, in progress.
+- A7: Stripe PaymentIntent creation, webhook endpoint with signature verification, order status state machine (pending -> paid / failed).
+- Track B Stage 1 (freelance profiles): lead declined, in progress. Stage 2 unlocks upon A7 completion.
 - Track C (reading and math habit): low intensity.
 
 ## Working agreements
@@ -50,4 +51,4 @@ Last updated: 2026-11-09. Source of truth for the plan: Roadmap v4. Update this 
 
 ## Next step
 
-Create `app/schemas/cart.py` (CartItemCreate, CartItemRead, CartRead), then build `app/routers/cart.py`.
+Start Milestone A7: Stripe test-mode payments (PaymentIntent flow, webhooks, and order status transitions).

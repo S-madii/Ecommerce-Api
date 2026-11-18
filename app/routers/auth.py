@@ -6,9 +6,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, get_current_user
-from app.db.session import get_db
-from app.models.user import User
-from app.schemas.user import UserCreate, UserRead, Token
+from app.db import get_db
+from app.models import User
+from app.schemas import Token, UserCreate, UserRead
 
 DUMMY_HASH = hashpw(b"dummy_password", gensalt())
 router = APIRouter()
