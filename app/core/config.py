@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = None
     SECRET_KEY: SecretStr
     STRIPE_SECRET_KEY: SecretStr
+    STRIPE_WEBHOOK_SECRET: SecretStr | None = None
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
