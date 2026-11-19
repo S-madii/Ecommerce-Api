@@ -5,17 +5,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import OrderItem, Product, User, Order
-from app.schemas import CheckoutRequest, OrderRead
+from app.models import OrderItem, Product, User, Order, Payment
+from app.schemas import CheckoutRequest, OrderRead, CheckoutResponse
 
 from app.core.security import get_current_user
 from app.db import get_db
 from app.routers.cart import get_or_create_active_cart
+from app.services import PaymentService
 
 router = APIRouter()
 
 
-@router.post("/checkout", response_model=OrderRead, status_code=status.HTTP_201_CREATED)
+@router.post("/checkout", response_model=CheckoutResponse, status_code=status.HTTP_201_CREATED)
 async def checkout(
         request: CheckoutRequest,
         current_user: User = Depends(get_current_user),
@@ -70,6 +71,16 @@ async def checkout(
     )
     db.add(order)
     cart.status = 'converted'
+    await db.flush()
+    intent = PaymentService.create_payment_intent(order)
+    payment = Payment(
+        order_id=order.id,
+        provider='stripe',
+        provider_payment_id=intent.id,
+        amount=order.total,
+        status='pending',
+    )
+    db.add(payment)
     await db.commit()
     await db.refresh(order, attribute_names=["items"])
-    return order
+    return CheckoutResponse(order=order, client_secret=intent.client_secret)
