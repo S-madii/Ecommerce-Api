@@ -1,6 +1,6 @@
 # PROGRESS: commerce-api
 
-Last updated: 2026-11-18. Source of truth for the plan: Roadmap v4. Update this file only when asked.
+Last updated: 2026-11-19. Source of truth for the plan: Roadmap v4. Update this file only when asked.
 
 ---
 
@@ -12,22 +12,24 @@ Last updated: 2026-11-18. Source of truth for the plan: Roadmap v4. Update this 
 - **A4 JWT authentication:** done. Verified signup (201 & 409), login returning JWT token, and `/auth/me` with Bearer auth (200 & 401).
 - **A5 Product & Category Catalog:** done 100%. Categories (create, read), Products (create with category validation and SKU conflict, read detail with `selectinload`, dynamic multi-filter with `q` autoescaping, price bounds, category, safe whitelist sorting with tiebreaker, and `ProductList` envelope with total count).
 - **A6 Cart & Concurrency:** done 100%. Cart schemas, active cart session management, add/update/delete cart items, and POST /orders/checkout with deterministic deadlock-free row-level locking (`with_for_update`), atomic stock deduction, frozen price snapshotting in `order_items`, and cart status conversion.
-- **A7 Stripe Payments (Test mode only):** next up.
+- **A7 Stripe Payments (Test mode only):** done 100%. Service layer `PaymentService` (`create_payment_intent`, `verify_payment_intent`), `CheckoutResponse` with `client_secret`, checkout route integration with `flush()` to allocate `order.id`, and `POST /payments/webhook` with raw-bytes HMAC signature verification, idempotency handling, and order/payment status state machine transition to 'confirmed'/'succeeded'.
+- **A8 Redis Caching & Celery:** next up.
 
 ## Files
 
 - `app/main.py`: `/health`, `/health/db`, `/users/{user_id}`, mounts central `api_router`.
-- `app/schemas/`: `user.py`, `category.py`, `product.py`, `cart.py`, `order.py`.
-- `app/routers/`: `auth.py`, `categories.py`, `products.py`, `cart.py`, `orders.py`, with central aggregation in `app/routers/__init__.py`.
-- `app/core/`: `config.py` (Settings), `security.py` (create_access_token, get_current_user), `exceptions.py` (AppHTTPError, NotFoundError).
+- `app/schemas/`: `user.py`, `category.py`, `product.py`, `cart.py`, `order.py`, `payment.py`.
+- `app/routers/`: `auth.py`, `categories.py`, `products.py`, `cart.py`, `orders.py`, `payments.py`, with central aggregation in `app/routers/__init__.py`.
+- `app/services/`: `payment.py` (Stripe PaymentIntent creation, webhook verification).
+- `app/core/`: `config.py` (Settings with Stripe keys), `security.py` (create_access_token, get_current_user), `exceptions.py` (AppHTTPError, NotFoundError).
 - `app/models/`: user, category, product, cart (Cart and CartItem), order (Order, OrderItem, Payment).
 - `app/db/session.py`: `echo=True`, `expire_on_commit=False`, `get_db` dependency.
 - `playground.py`: scratch script, done.
 
 ## Open items
 
-- A7: Stripe PaymentIntent creation, webhook endpoint with signature verification, order status state machine (pending -> paid / failed).
-- Track B Stage 1 (freelance profiles): lead declined, in progress. Stage 2 unlocks upon A7 completion.
+- A8: Redis caching for popular catalog endpoints with invalidation, and one Celery background job (e.g. order confirmation email / abandoned cart cleanup).
+- Track B Stage 1 (freelance profiles): lead declined. Stage 2 (payments) is now unlocked!
 - Track C (reading and math habit): low intensity.
 
 ## Working agreements
@@ -51,4 +53,4 @@ Last updated: 2026-11-18. Source of truth for the plan: Roadmap v4. Update this 
 
 ## Next step
 
-Start Milestone A7: Stripe test-mode payments (PaymentIntent flow, webhooks, and order status transitions).
+Start Milestone A8: Redis caching and Celery background workers.

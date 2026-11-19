@@ -310,3 +310,47 @@ In the same transaction:
 3. `cart.status = "converted"`
 4. `await db.commit()` $\rightarrow$ all row locks are automatically released and changes persist atomically. If
    anything fails, `await db.rollback()` reverts stock and releases locks immediately.
+
+---
+
+## 9. External Payments & Webhook Security (A7)
+
+### Why Never Collect Card Numbers on the Backend
+Handling raw credit card numbers requires strict, expensive PCI-DSS compliance audits. Instead, modern production systems use Stripe's **PaymentIntent** flow:
+- The backend creates an intent and returns a temporary `client_secret`.
+- The user's browser transmits credit card details directly to Stripe's Elements SDK.
+- The merchant server never sees, touches, or stores raw card data.
+
+### Money Representation in Integer Cents
+Stripe does not accept floating point dollars (e.g. `$19.99`). Floats introduce binary rounding errors (e.g. `0.1 + 0.2 = 0.30000000000000004`).
+- **Pattern:** Convert Decimal to exact integer cents:
+  ```python
+  amount_cents = int((order.total * 100).to_integral_value())
+  ```
+
+### `db.flush()` vs `db.commit()`
+When creating an entity with a database-generated ID (like Postgres `Identity(always=True)`):
+- `db.add(order)` leaves `order.id` as `None`.
+- `await db.flush()` writes SQL to Postgres so `order.id` is allocated, **without ending the transaction** or releasing locks.
+- You can now use `order.id` in Stripe metadata and linked `Payment(order_id=order.id)` records before calling `await db.commit()`.
+
+### Webhooks as the Sole Source of Truth
+Never rely on the customer's browser redirect to confirm an order was paid (browsers can drop Wi-Fi, run out of battery, or be manipulated by attackers).
+- Stripe's server-to-server **Webhook** (`POST /payments/webhook`) is the only authoritative notification that money moved.
+
+### Cryptographic Signature Verification on Raw Bytes
+To prevent attackers from sending fake HTTP requests to mark orders paid:
+- Stripe signs the request body using HMAC-SHA256 with `STRIPE_WEBHOOK_SECRET`.
+- The signature must be verified against **exact raw bytes** (`await request.body()`), not parsed JSON, because whitespace or key ordering differences invalidate the hash:
+  ```python
+  event = stripe.Webhook.construct_event(
+      payload=raw_bytes,
+      sig_header=stripe_signature,
+      secret=settings.STRIPE_WEBHOOK_SECRET.get_secret_value()
+  )
+  ```
+
+### Webhook Idempotency
+Stripe retries webhook deliveries if a network hiccup interrupts your response.
+- **Rule:** If an order or payment is already confirmed, **never return a 400 or 500 error** (which triggers more retries). Safely skip processing and return `200 OK` immediately.
+
