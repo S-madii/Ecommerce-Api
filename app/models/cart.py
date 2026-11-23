@@ -36,7 +36,7 @@ class Cart(Base):
             "uq_carts_one_active_per_user",
             "user_id",
             unique=True,
-            postgresql_where=text("status = 'active')")
+            postgresql_where=text("status = 'active'")
         ) #One active cart per user
     )
 

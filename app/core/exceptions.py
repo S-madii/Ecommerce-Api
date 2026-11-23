@@ -19,3 +19,18 @@ class ForbiddenError(AppHTTPError):
 class NotFoundError(AppHTTPError):
     def __init__(self, detail: str = "Not found"):
         super().__init__(404, detail)
+
+
+class CheckoutError(Exception):
+    """Base error for checkout operations."""
+    pass
+
+
+class EmptyCartError(CheckoutError):
+    pass
+
+
+class InsufficientStockError(CheckoutError):
+    def __init__(self, product_name: str):
+        self.product_name = product_name
+        super().__init__(f"Insufficient stock for {product_name}")

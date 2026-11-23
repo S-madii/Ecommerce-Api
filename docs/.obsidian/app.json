@@ -1,0 +1,8 @@
+{
+  "spellcheck": false,
+  "livePreview": true,
+  "readableLineLength": true,
+  "strictLineBreaks": false,
+  "autoPairMarkdown": true,
+  "autoPairBrackets": true
+}
