@@ -16,12 +16,25 @@ class ForbiddenError(AppHTTPError):
         super().__init__(403, detail)
 
 
-class NotFoundError(AppHTTPError):
-    def __init__(self, detail: str = "Not found"):
-        super().__init__(404, detail)
+class DomainError(Exception):
+    """Base domain exception independent of HTTP."""
+
+    def __init__(self, message: str = "A domain error occurred"):
+        self.message = message
+        super().__init__(message)
 
 
-class CheckoutError(Exception):
+class NotFoundError(DomainError):
+    def __init__(self, message: str = "Resource not found"):
+        super().__init__(message)
+
+
+class ConflictError(DomainError):
+    def __init__(self, message: str = "Resource conflict"):
+        super().__init__(message)
+
+
+class CheckoutError(DomainError):
     """Base error for checkout operations."""
     pass
 

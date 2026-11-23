@@ -83,8 +83,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "right": {
     "id": "49d39f9c0f00494c",
@@ -191,6 +190,7 @@
   },
   "active": "c58c9030fa0a6ec7",
   "lastOpenFiles": [
+    "notes/A8_redis_celery.md",
     "PROGRESS.md",
     "README.md",
     "notes/A7_stripe_payments.md",
