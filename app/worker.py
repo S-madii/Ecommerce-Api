@@ -20,9 +20,8 @@ celery_app.conf.update(
 
 # 3. Define the Background Task
 @celery_app.task(name="send_order_confirmation_email")
-def send_order_confirmation_email(order_id: int, customer_email: str):
-    """Simulates sending an order confirmation email in the background."""
-    print(f"[CELERY WORKER] 📧 Sending confirmation email for Order #{order_id} to {customer_email}...")
-    # In real production, call SendGrid, Postmark, or SMTP here!
+def send_order_confirmation_email(order_id: int, customer_email: str | None = None):
+    email = customer_email or f"customer_order_{order_id}@example.com"
+    print(f"[CELERY WORKER] 📧 Sending confirmation email for Order #{order_id} to {email}...")
     print(f"[CELERY WORKER] ✅ Email successfully sent for Order #{order_id}!")
     return {"order_id": order_id, "status": "sent"}

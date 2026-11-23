@@ -11,6 +11,7 @@ from app.schemas import payment
 
 from app.db import get_db
 from app.services import PaymentService
+from app.worker import send_order_confirmation_email
 
 router = APIRouter()
 
@@ -44,4 +45,5 @@ async def stripe_webhook(
         return {"status": "Already Confirmed"}
     payment_.status = "succeeded"
     await db.commit()
+    send_order_confirmation_email.delay(order.id)
     return {"status": "success"}
