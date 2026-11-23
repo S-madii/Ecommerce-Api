@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import NotFoundError
+from app.core.redis import redis_client
 from app.models import Category, Product
 from app.schemas import ProductCreate, ProductList, ProductRead
 
@@ -40,19 +41,26 @@ class ProductService:
                 detail="Product with this SKU already exists",
             )
         await db.refresh(new_product, attribute_names=["category"])
+        keys = [key async for key in redis_client.scan_iter("products:list:*")]
+        if keys:
+            await redis_client.delete(*keys)
         return new_product
 
     @staticmethod
     async def list_products(
-        db: AsyncSession,
-        limit: int = 20,
-        offset: int = 0,
-        q: str | None = None,
-        min_price: Decimal | None = None,
-        max_price: Decimal | None = None,
-        sort: Literal["price_asc", "price_desc", "newest"] = "newest",
-        category_id: int | None = None,
+            db: AsyncSession,
+            limit: int = 20,
+            offset: int = 0,
+            q: str | None = None,
+            min_price: Decimal | None = None,
+            max_price: Decimal | None = None,
+            sort: Literal["price_asc", "price_desc", "newest"] = "newest",
+            category_id: int | None = None,
     ) -> ProductList:
+        cache_key = f"products:list:{limit}:{offset}:{q}:{category_id}:{min_price}:{max_price}:{sort}"
+        cached = await redis_client.get(cache_key)
+        if cached:
+            return ProductList.model_validate_json(cached)
         conditions = [Product.is_active == True]
         if q is not None:
             conditions.append(Product.name.icontains(q, autoescape=True))
@@ -83,16 +91,21 @@ class ProductService:
         )
         result = await db.execute(query)
         products = result.scalars().all()
-
-        return ProductList(
+        product_list = ProductList(
             items=[ProductRead.model_validate(p) for p in products],
             total=total,
             limit=limit,
             offset=offset,
         )
+        await redis_client.set(cache_key, product_list.model_dump_json(), ex=60)  # 60 seconds TTL
+        return product_list
 
     @staticmethod
-    async def get_product_by_id(db: AsyncSession, product_id: int) -> Product:
+    async def get_product_by_id(db: AsyncSession, product_id: int) -> ProductRead:
+        cache_key = f"product:{product_id}"
+        cached = await redis_client.get(cache_key)
+        if cached:
+            return ProductRead.model_validate_json(cached)
         query = (
             select(Product)
             .options(selectinload(Product.category))
@@ -102,4 +115,6 @@ class ProductService:
         product = result.scalar_one_or_none()
         if not product:
             raise NotFoundError(detail="Product not found")
+        product_schema = ProductRead.model_validate(product)
+        await redis_client.set(f"product:{product_id}", product_schema.model_dump_json(), ex=3600)
         return product
