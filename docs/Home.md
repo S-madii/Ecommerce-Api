@@ -33,6 +33,8 @@ Quick-reference study sheets covering decisions, code patterns, and traps from e
 | **A5** | Product Catalog | `selectinload` eager loading, multi-filters (`icontains`), safe sorting, envelopes | [[notes/A5_catalog_queries\|A5: Catalog & Filters]] |
 | **A6** | Cart & Concurrency | `SELECT ... FOR UPDATE`, sorted deadlock prevention, price snapshots | [[notes/A6_concurrency_checkout\|A6: Concurrency & Checkout]] |
 | **A7** | Stripe Payments | Zero-trust PaymentIntent, integer cents math, `db.flush()`, HMAC webhooks | [[notes/A7_stripe_payments\|A7: Stripe Payments]] |
+| **A8** | Caching & Celery | Async Redis pool, cache-aside pattern, active invalidation, Celery IPC worker | [[notes/A8_redis_celery\|A8: Caching & Workers]] |
+| **A9** | Architecture Hardening | Domain exceptions, global translation, transaction boundary, pagination defense | [[notes/A9_production_architecture_hardening\|A9: Architecture Hardening]] |
 
 ---
 

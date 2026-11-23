@@ -19,13 +19,16 @@ async def create_product(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await ProductService.create_product(db, product)
+    new_product = await ProductService.create_product(db, product)
+    await db.commit()
+    await ProductService.invalidate_product_list_cache()
+    return new_product
 
 
 @router.get("", response_model=ProductList)
 async def read_products(
     limit: int = Query(default=20, ge=1, le=100),
-    offset: int = Query(default=0, ge=0),
+    offset: int = Query(default=0, ge=0, le=50000),
     q: str | None = None,
     max_price: Decimal | None = Query(default=None, ge=0),
     min_price: Decimal | None = Query(default=None, ge=0),

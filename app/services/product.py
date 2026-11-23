@@ -1,13 +1,12 @@
 from decimal import Decimal
 from typing import Literal
 
-from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import NotFoundError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.core.redis import redis_client
 from app.models import Category, Product
 from app.schemas import ProductCreate, ProductList, ProductRead
@@ -33,18 +32,18 @@ class ProductService:
         )
         db.add(new_product)
         try:
-            await db.commit()
+            await db.flush()
         except IntegrityError:
             await db.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Product with this SKU already exists",
-            )
+            raise ConflictError(detail="Product with this SKU already exists")
         await db.refresh(new_product, attribute_names=["category"])
+        return new_product
+
+    @staticmethod
+    async def invalidate_product_list_cache() -> None:
         keys = [key async for key in redis_client.scan_iter("products:list:*")]
         if keys:
             await redis_client.delete(*keys)
-        return new_product
 
     @staticmethod
     async def list_products(

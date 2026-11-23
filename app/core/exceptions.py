@@ -19,19 +19,19 @@ class ForbiddenError(AppHTTPError):
 class DomainError(Exception):
     """Base domain exception independent of HTTP."""
 
-    def __init__(self, message: str = "A domain error occurred"):
-        self.message = message
-        super().__init__(message)
+    def __init__(self, message: str = "A domain error occurred", detail: str | None = None):
+        self.message = detail or message
+        super().__init__(self.message)
 
 
 class NotFoundError(DomainError):
-    def __init__(self, message: str = "Resource not found"):
-        super().__init__(message)
+    def __init__(self, message: str = "Resource not found", detail: str | None = None):
+        super().__init__(detail or message)
 
 
 class ConflictError(DomainError):
-    def __init__(self, message: str = "Resource conflict"):
-        super().__init__(message)
+    def __init__(self, message: str = "Resource conflict", detail: str | None = None):
+        super().__init__(detail or message)
 
 
 class CheckoutError(DomainError):
