@@ -46,6 +46,7 @@ stmt = (
 1. **Exclusive Lock**: PostgreSQL places an in-memory lock on the selected product rows. Concurrent checkouts on the same items are forced to pause and wait.
 2. **Deadlock Elimination**: By sorting `product_ids` in ascending numerical order, all concurrent transactions acquire row locks in the exact same sequence. Circular lock dependency is impossible.
 3. **Rollback Release**: If a stock check fails, calling `await db.rollback()` immediately releases the row locks and restores inventory.
+4. **Lock Decoupling**: Database transactions with pessimistic locks are committed immediately ($\sim$2–5 ms) *before* external network calls (Stripe) are made. If payment creation fails, inventory is restored using atomic SQL updates.
 
 ---
 

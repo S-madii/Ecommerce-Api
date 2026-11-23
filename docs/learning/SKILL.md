@@ -231,7 +231,7 @@ sort_criterion = SORT_MAP[sort]
 Database partial index:
 
 ```python
-Index("uq_carts_one_active_per_user", "user_id", unique=True, postgresql_where=text("status = 'active')"))
+Index("uq_carts_one_active_per_user", "user_id", unique=True, postgresql_where=text("status = 'active'"))
 ```
 
 Guarantees a buyer has at most 1 active cart. Converted/abandoned carts do not block creating a new one.
@@ -301,15 +301,31 @@ Store prices change over time, but legal receipts and order history must never m
   )
   ```
 
-### Atomic Cart Conversion
+### Atomic Cart Conversion & Lock Release
 
-In the same transaction:
+In the first transaction:
 
 1. `product.stock -= item.quantity`
 2. Create `Order` and `OrderItem` records
 3. `cart.status = "converted"`
 4. `await db.commit()` $\rightarrow$ all row locks are automatically released and changes persist atomically. If
    anything fails, `await db.rollback()` reverts stock and releases locks immediately.
+
+### Decoupling Database Locks from External Network Calls
+
+Never make third-party network calls (such as Stripe API) while holding row locks with `with_for_update()`:
+
+- **Phase 1 (Database Transaction):** Acquire row locks, check inventory, decrement stock, create the `Order`, and commit ($\sim$2–5 ms) to free the database locks immediately for other customers.
+- **Phase 2 (External Call):** Call `PaymentService.create_payment_intent(order)` with zero database locks held.
+- **Phase 3 (Failure Compensation):** If Stripe fails, mark `order.status = 'cancelled'` and restore inventory using atomic SQL statements:
+  ```python
+  await db.execute(
+      update(Product)
+      .where(Product.id == item.product_id)
+      .values(stock=Product.stock + item.quantity)
+  )
+  ```
+  Atomic SQL increments prevent Lost Update race conditions without needing explicit row locks.
 
 ---
 

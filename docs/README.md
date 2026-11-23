@@ -20,7 +20,10 @@ flowchart TD
     end
 
     subgraph ServiceLayer ["Service Layer (app/services/)"]
-        PayService["PaymentService<br/>- Intent creation<br/>- HMAC signature check"]
+        CartService["CartService<br/>- Active cart session<br/>- Item mutations & subtotals"]
+        ProdService["ProductService<br/>- Catalog filtering & search<br/>- Pagination & sorting"]
+        OrderService["OrderService<br/>- Decoupled checkout<br/>- Pessimistic locking & compensation"]
+        PayService["PaymentService<br/>- Stripe Intent creation<br/>- HMAC webhook verification"]
     end
 
     subgraph Storage ["Persistence Layer"]
@@ -32,10 +35,13 @@ flowchart TD
     end
 
     Client <--> API
-    OrderRouter --> PayService
+    CartRouter --> CartService
+    ProdRouter --> ProdService
+    OrderRouter --> OrderService
+    OrderService --> PayService
     PayRouter --> PayService
     PayService <--> Stripe
-    API <--> PG
+    ServiceLayer <--> PG
 ```
 
 ---

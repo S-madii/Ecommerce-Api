@@ -19,6 +19,9 @@ flowchart TD
     end
 
     subgraph Services ["Service Layer"]
+        CartService["CartService (Session Management & Item Calculations)"]
+        ProdService["ProductService (Dynamic Multi-Filtering & Search)"]
+        OrderService["OrderService (Decoupled Checkout & Pessimistic Concurrency)"]
         PayService["PaymentService (Stripe SDK & Webhook Verification)"]
     end
 
@@ -32,10 +35,13 @@ flowchart TD
     end
 
     Client <--> API
-    Orders --> PayService
+    Cart --> CartService
+    Catalog --> ProdService
+    Orders --> OrderService
+    OrderService --> PayService
     Payments --> PayService
     PayService <--> Stripe["Stripe API"]
-    API <--> PG
+    Services <--> PG
     API <--> RedisStore
     RedisStore <--> CeleryWorker
 ```

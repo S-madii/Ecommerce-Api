@@ -20,7 +20,7 @@ Last updated: 2026-11-19. Source of truth for the plan: Roadmap v4. Update this 
 - `app/main.py`: `/health`, `/health/db`, `/users/{user_id}`, mounts central `api_router`.
 - `app/schemas/`: `user.py`, `category.py`, `product.py`, `cart.py`, `order.py`, `payment.py`.
 - `app/routers/`: `auth.py`, `categories.py`, `products.py`, `cart.py`, `orders.py`, `payments.py`, with central aggregation in `app/routers/__init__.py`.
-- `app/services/`: `payment.py` (Stripe PaymentIntent creation, webhook verification).
+- `app/services/`: `cart.py` (CartService for active carts, item mutations), `order.py` (OrderService for checkout orchestration, decoupled locking, stock management), `payment.py` (PaymentService for Stripe PaymentIntent, webhook verification), `product.py` (ProductService for catalog search, filtering, pagination).
 - `app/core/`: `config.py` (Settings with Stripe keys), `security.py` (create_access_token, get_current_user), `exceptions.py` (AppHTTPError, NotFoundError).
 - `app/models/`: user, category, product, cart (Cart and CartItem), order (Order, OrderItem, Payment).
 - `app/db/session.py`: `echo=True`, `expire_on_commit=False`, `get_db` dependency.
