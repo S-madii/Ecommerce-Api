@@ -1,22 +1,74 @@
-# Notes: Phase A7 — Stripe Payments & Zero-Trust Webhooks
+---
+tags:
+  - notes
+  - stripe
+  - payments
+  - webhooks
+---
 
-## Key Decisions
-- **Zero-Trust PaymentIntent Architecture**: Never handle raw card numbers on the backend (avoids PCI-DSS audits). The backend creates a `PaymentIntent` and returns a `client_secret` to the browser.
-- **Service Layer Isolation (`app/services/payment.py`)**: Keeps external Stripe SDK interactions cleanly decoupled from FastAPI HTTP route controllers.
-- **`await db.flush()` Pattern**: Used when an entity needs its database-generated ID (like `order.id`) before committing, allowing it to be linked to Stripe metadata and the `Payment` table within the same transaction.
+# 💳 Notes: Phase A7 — Stripe Payments & Zero-Trust Webhooks
 
-## Common Traps & Lessons
-- **Floating-Point Currency Representation Bug**:
-  Computers cannot represent binary fractions accurately (`0.1 + 0.2 != 0.3`). Stripe accepts integer cents, not floating-point dollars.
-  - **Fix**: Convert Decimal directly to integer cents:
-    ```python
-    amount_cents = int((order.total * 100).to_integral_value())
-    ```
-- **Webhooks as the Single Source of Truth**:
-  Never rely on the customer's browser redirect to confirm payment. Browsers can drop Wi-Fi, run out of battery, or be intercepted by hackers. Only Stripe's server-to-server webhook has authority to mark orders paid.
-- **HMAC Signature Verification on Raw Bytes**:
-  Stripe hashes the request body with `STRIPE_WEBHOOK_SECRET`.
-  - **Trap**: If FastAPI parses the body to JSON first, whitespace or key order changes, invalidating the HMAC.
-  - **Fix**: Always verify using raw bytes: `payload = await request.body()`.
-- **Webhook Idempotency**:
-  Stripe retries webhook delivery if your server's response drops. If an order or payment is already confirmed, **never return 400 or 500**. Log it, skip processing, and return `200 OK` immediately to prevent infinite retry storms.
+> [!abstract] Overview
+> Implementing the Stripe PaymentIntent lifecycle, integer cents precision, `db.flush()` entity allocation, and HMAC-SHA256 signature verification for webhooks.
+
+---
+
+## 🔄 Two-Phase Payment Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Customer as Customer
+    participant API as FastAPI Backend
+    participant Stripe as Stripe Cloud
+    participant DB as Postgres
+
+    Note over Customer,API: Phase 1: Intent Creation (Synchronous)
+    Customer->>API: POST /orders/checkout
+    API->>Stripe: stripe.PaymentIntent.create(amount=1999, currency="usd")
+    Stripe-->>API: PaymentIntent (client_secret)
+    API->>DB: INSERT INTO payments (status='pending')
+    API-->>Customer: Return client_secret
+
+    Note over Customer,Stripe: Phase 2: Webhook Confirmation (Asynchronous)
+    Customer->>Stripe: Sends card details to Stripe Elements
+    Stripe->>API: POST /payments/webhook (payment_intent.succeeded)
+    Note over API: 🔒 Verify HMAC-SHA256 on raw bytes
+    API->>DB: UPDATE orders SET status = 'confirmed'
+    API->>DB: UPDATE payments SET status = 'succeeded'
+    API-->>Stripe: 200 OK
+```
+
+---
+
+## 💎 Critical Implementation Details
+
+### 1. Integer Cents Conversion
+Never pass floating-point dollars to Stripe:
+```python
+amount_cents = int((order.total * 100).to_integral_value())
+```
+
+### 2. The `await db.flush()` Pattern
+When inserting an entity with a database-generated ID (`Identity(always=True)`):
+- `db.add(order)` leaves `order.id` as `None`.
+- `await db.flush()` sends SQL to Postgres to allocate `order.id` **without committing or ending the transaction**.
+- Now `order.id` can be linked to Stripe metadata and the `Payment` table before the final commit.
+
+### 3. Raw Bytes for Webhook HMAC
+Stripe hashes the exact raw body sent over the network. If FastAPI parses JSON first, key order and whitespace change, breaking the signature.
+```python
+payload = await request.body() # Raw bytes!
+event = stripe.Webhook.construct_event(
+    payload=payload,
+    sig_header=stripe_signature,
+    secret=settings.STRIPE_WEBHOOK_SECRET.get_secret_value()
+)
+```
+
+---
+
+## 🔗 Related Notes & Deep Dives
+- ⬅️ Previous: [[notes/A6_concurrency_checkout|A6: Concurrency & Checkout]]
+- ⚡ [[learning/SKILL|Master SKILL Reference]]
+- 🗺️ [[roadmap|Roadmap Overview]]

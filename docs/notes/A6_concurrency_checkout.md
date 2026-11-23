@@ -1,25 +1,69 @@
-# Notes: Phase A6 — Cart Mechanics & Pessimistic Concurrency (Checkout)
+---
+tags:
+  - notes
+  - concurrency
+  - checkout
+  - locking
+---
 
-## Key Decisions
-- **Get-or-Create Active Cart**: Active carts are automatically initialized if missing. When an order completes, the cart is transitioned to `status = 'converted'`, allowing subsequent requests to cleanly generate a new active cart.
-- **Multi-Tenancy Scoping**: Every cart item update or deletion must be scoped: `CartItem.id == item_id` **and** `CartItem.cart_id == cart.id`. Never query by ID alone.
-- **Pessimistic Row-Level Locking (`SELECT ... FOR UPDATE`)**:
-  ```python
-  stmt = (
-      select(Product)
-      .where(Product.id.in_(product_ids))
-      .order_by(Product.id.asc())
-      .with_for_update()
-  )
-  ```
+# 🔒 Notes: Phase A6 — Cart Mechanics & Pessimistic Concurrency
 
-## Common Traps & Lessons
-- **Race Condition / Overselling**:
-  Without row locks, two checkouts on `stock = 1` both read `1`, both deduct, and leave inventory at `-1`. `with_for_update()` forces concurrent requests to wait until the lock holder commits or rolls back.
-- **Deadlock Elimination**:
-  If User A locks Product 1 then waits for Product 2, while User B locks Product 2 then waits for Product 1, Postgres aborts with a deadlock.
-  - **Rule**: Always sort product IDs numerically (`sorted(product_ids)`) before locking. Every transaction locks rows in the exact same sequence.
-- **Rollback on Insufficient Stock**:
-  If stock check fails halfway through, calling `await db.rollback()` is mandatory to immediately release row locks so other shoppers aren't blocked.
-- **Price Snapshotting (`OrderItem`)**:
-  Store prices change over time, but legal receipts and invoices must never mutate. On checkout, freeze `unit_price`, `sku`, and `product_name` directly into `order_items`.
+> [!abstract] Overview
+> Building an active shopping cart session manager and solving inventory race conditions (overselling) during checkout using PostgreSQL row-level locks (`SELECT ... FOR UPDATE`).
+
+---
+
+## ⚡ The Concurrency Overselling Problem
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as User A
+    participant DB as Postgres (stock = 1)
+    participant B as User B
+
+    A->>DB: SELECT stock (returns 1)
+    B->>DB: SELECT stock (returns 1)
+    Note over A,B: Both see 1 item in stock!
+    A->>DB: UPDATE stock = 0
+    B->>DB: UPDATE stock = -1 (💥 OVERSOLD!)
+```
+
+---
+
+## 🛡️ The Solution: Pessimistic Locking (`with_for_update`)
+
+```python
+stmt = (
+    select(Product)
+    .where(Product.id.in_(product_ids))
+    .order_by(Product.id.asc())  # Prevents Deadlocks!
+    .with_for_update()
+)
+```
+
+### The 3 Core Guarantees:
+1. **Exclusive Lock**: PostgreSQL places an in-memory lock on the selected product rows. Concurrent checkouts on the same items are forced to pause and wait.
+2. **Deadlock Elimination**: By sorting `product_ids` in ascending numerical order, all concurrent transactions acquire row locks in the exact same sequence. Circular lock dependency is impossible.
+3. **Rollback Release**: If a stock check fails, calling `await db.rollback()` immediately releases the row locks and restores inventory.
+
+---
+
+## 📜 Price Snapshotting (`OrderItem`)
+Store prices fluctuate over time. Customer invoices must remain immutable:
+```python
+OrderItem(
+    product_id=product.id,
+    product_name=product.name,  # Frozen snapshot
+    sku=product.sku,            # Frozen snapshot
+    unit_price=product.price,   # Frozen snapshot
+    quantity=cart_item.quantity
+)
+```
+
+---
+
+## 🔗 Related Notes & Deep Dives
+- ⬅️ Previous: [[notes/A5_catalog_queries|A5: Catalog & Filters]]
+- ➡️ Next Milestone: [[notes/A7_stripe_payments|A7: Stripe Payments]]
+- ⚡ [[learning/SKILL|Master SKILL Reference]]
