@@ -15,4 +15,4 @@ htmlcov/
 .vscode
 *.log
 docs/
-playground.py
+docs/notes/playground.py

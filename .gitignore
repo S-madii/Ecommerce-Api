@@ -5,10 +5,10 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .mypy_cache/
-playground.py
+docs/notes/playground.py
 .idea/
 claude.md
-skills/.obsidian
+skills/
 docs/learning
 docs/PROGRESS.md
 docs/Roadmap_v4_Styled.pdf

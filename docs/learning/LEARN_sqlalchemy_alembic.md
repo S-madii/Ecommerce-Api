@@ -1,6 +1,7 @@
 # Learn: SQLAlchemy + Alembic (from zero)
 
-Read this top to bottom. Each part has **Do** steps. Don't skip ahead — every step works and is tested before the next one.
+Read this top to bottom. Each part has **Do** steps. Don't skip ahead — every step works and is tested before the next
+one.
 
 ---
 
@@ -15,7 +16,8 @@ row = cursor.fetchone()          # row is a tuple/dict
 print(row["email"])
 ```
 
-With an **ORM** (Object-Relational Mapper) you describe each table **once** as a Python class. Then you work with Python objects, and SQLAlchemy writes the SQL for you:
+With an **ORM** (Object-Relational Mapper) you describe each table **once** as a Python class. Then you work with Python
+objects, and SQLAlchemy writes the SQL for you:
 
 ```python
 user = User(email=email, password_hash=pw)   # a Python object = one future row
@@ -27,16 +29,17 @@ user = result.scalar_one()                   # user is a User object, not a tupl
 print(user.email)
 ```
 
-Same database, same SQL underneath. You still need to understand SQL — the ORM just saves typing and catches mistakes (typos in column names become Python errors instead of runtime SQL errors).
+Same database, same SQL underneath. You still need to understand SQL — the ORM just saves typing and catches mistakes
+(typos in column names become Python errors instead of runtime SQL errors).
 
 **Four pieces you'll build, and what each one is:**
 
-| Piece | File | Real-world analogy |
-|---|---|---|
-| **Base** | `db/base.py` | The registry book where every table gets written down |
-| **Engine** | `db/session.py` | The phone line to Postgres (kept open, reused) |
-| **Session** | `db/session.py` | One phone call: a conversation for one request |
-| **Models** | `models/*.py` | The description of each table |
+| Piece       | File            | Real-world analogy                                    |
+|-------------|-----------------|-------------------------------------------------------|
+| **Base**    | `db/base.py`    | The registry book where every table gets written down |
+| **Engine**  | `db/session.py` | The phone line to Postgres (kept open, reused)        |
+| **Session** | `db/session.py` | One phone call: a conversation for one request        |
+| **Models**  | `models/*.py`   | The description of each table                         |
 
 And **Alembic** = the tool that reads your models and creates/changes the real tables in Postgres.
 
@@ -54,15 +57,19 @@ class Base(DeclarativeBase):
     pass
 ```
 
-That's it. Every model will inherit from `Base`. When a class inherits from it, SQLAlchemy writes that table into `Base.metadata` — a list of every table your app has. Alembic reads `Base.metadata` later to know what tables should exist.
+That's it. Every model will inherit from `Base`. When a class inherits from it, SQLAlchemy writes that table into
+`Base.metadata` — a list of every table your app has. Alembic reads `Base.metadata` later to know what tables should
+exist.
 
-*Why its own file:* models need it and Alembic needs it, but neither should have to open a database connection just to get it.
+*Why its own file:* models need it and Alembic needs it, but neither should have to open a database connection just to
+get it.
 
 ---
 
 ## Part 2 — Engine, session, and get_db
 
-This file is **boilerplate**: almost identical in every FastAPI project. You don't need to invent it — you need to understand it.
+This file is **boilerplate**: almost identical in every FastAPI project. You don't need to invent it — you need to
+understand it.
 
 **Do:** create `app/db/session.py`:
 
@@ -88,13 +95,15 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 Line by line:
 
-- `create_async_engine(url, echo=True)` — builds the connection pool from your `.env` URL. `echo=True` prints every SQL query in your terminal. Keep it on while learning: you'll *see* what SQLAlchemy does.
+- `create_async_engine(url, echo=True)` — builds the connection pool from your `.env` URL. `echo=True` prints every SQL
+  query in your terminal. Keep it on while learning: you'll *see* what SQLAlchemy does.
 - `async_sessionmaker(engine, ...)` — not a session, a **factory**. Calling `SessionLocal()` gives you a fresh session.
-- `expire_on_commit=False` — by default, after `commit()` SQLAlchemy "forgets" the values of your objects and reloads them on next access. In async code that surprise-reload crashes. This turns it off.
+- `expire_on_commit=False` — by default, after `commit()` SQLAlchemy "forgets" the values of your objects and reloads
+  them on next access. In async code that surprise-reload crashes. This turns it off.
 - `get_db()` — a **generator** (it uses `yield`). FastAPI runs it like this:
-  1. request arrives → code runs up to `yield` → the session is handed to your endpoint
-  2. endpoint finishes (or crashes) → code continues after `yield` → `async with` closes the session
-  
+    1. request arrives → code runs up to `yield` → the session is handed to your endpoint
+    2. endpoint finishes (or crashes) → code continues after `yield` → `async with` closes the session
+
   So the session is **always** closed, even on errors. That's why `yield`, not `return`.
 
 **Do:** add a database health check in `app/main.py`:
@@ -124,9 +133,11 @@ async def health_db(db: AsyncSession = Depends(get_db)):
 - `text("SELECT 1")` = run raw SQL. `SELECT 1` is the classic "are you alive?" query.
 - `await` = this talks to the network (Postgres), so we wait for it without blocking other requests.
 
-**Test:** `uvicorn app.main:app --reload` → open `http://127.0.0.1:8000/health/db` → `{"database":"ok"}`. Look at your terminal: you'll see `SELECT 1` printed by `echo=True`.
+**Test:** `uvicorn app.main:app --reload` → open `http://127.0.0.1:8000/health/db` → `{"database":"ok"}`. Look at your
+terminal: you'll see `SELECT 1` printed by `echo=True`.
 
-Then stop Postgres (`sudo systemctl stop postgresql`), refresh, look at the result, start it again (`sudo systemctl start postgresql`).
+Then stop Postgres (`sudo systemctl stop postgresql`), refresh, look at the result, start it again
+(`sudo systemctl start postgresql`).
 
 **Commit.**
 
@@ -190,23 +201,25 @@ class User(Base):
 
 Now the SQL ↔ Python translation, piece by piece:
 
-| SQL | Python | Meaning |
-|---|---|---|
-| `CREATE TABLE users` | `class User(Base)` + `__tablename__ = "users"` | Class name = how you use it in Python. `__tablename__` = real table name |
-| `id BIGINT ... IDENTITY PRIMARY KEY` | `mapped_column(BigInteger, Identity(always=True), primary_key=True)` | Big auto-numbered ID, Postgres generates it |
-| `VARCHAR(255)` | `String(255)` | Text with max length |
-| `NOT NULL` | `Mapped[str]` | **No `None` in the type = NOT NULL.** SQLAlchemy reads your type hint! |
-| *(nullable)* | `Mapped[str \| None]` | `\| None` = column can be empty |
-| `TIMESTAMPTZ` | `DateTime(timezone=True)` | Date+time with timezone. Always use timezone=True |
-| `DEFAULT NOW()` | `server_default=func.now()` | Postgres fills it in. `func.now()` = the SQL function `NOW()` |
-| *(no SQL equivalent)* | `onupdate=func.now()` | When SQLAlchemy UPDATEs this row, it also sets `updated_at = NOW()` |
-| `CREATE UNIQUE INDEX ... (LOWER(email))` | `Index("...", func.lower(email), unique=True)` | `func.anything()` = call that SQL function |
-| `... WHERE phone_number IS NOT NULL` | `postgresql_where=text("...")` | Partial index: only checks rows matching the condition |
+| SQL                                      | Python                                                               | Meaning                                                                  |
+|------------------------------------------|----------------------------------------------------------------------|--------------------------------------------------------------------------|
+| `CREATE TABLE users`                     | `class User(Base)` + `__tablename__ = "users"`                       | Class name = how you use it in Python. `__tablename__` = real table name |
+| `id BIGINT ... IDENTITY PRIMARY KEY`     | `mapped_column(BigInteger, Identity(always=True), primary_key=True)` | Big auto-numbered ID, Postgres generates it                              |
+| `VARCHAR(255)`                           | `String(255)`                                                        | Text with max length                                                     |
+| `NOT NULL`                               | `Mapped[str]`                                                        | **No `None` in the type = NOT NULL.** SQLAlchemy reads your type hint!   |
+| *(nullable)*                             | `Mapped[str \| None]`                                                | `\| None` = column can be empty                                          |
+| `TIMESTAMPTZ`                            | `DateTime(timezone=True)`                                            | Date+time with timezone. Always use timezone=True                        |
+| `DEFAULT NOW()`                          | `server_default=func.now()`                                          | Postgres fills it in. `func.now()` = the SQL function `NOW()`            |
+| *(no SQL equivalent)*                    | `onupdate=func.now()`                                                | When SQLAlchemy UPDATEs this row, it also sets `updated_at = NOW()`      |
+| `CREATE UNIQUE INDEX ... (LOWER(email))` | `Index("...", func.lower(email), unique=True)`                       | `func.anything()` = call that SQL function                               |
+| `... WHERE phone_number IS NOT NULL`     | `postgresql_where=text("...")`                                       | Partial index: only checks rows matching the condition                   |
 
 Two things to understand about the syntax:
 
-- **`Mapped[...]`** is the *Python* type (what you get when you read `user.email`). **`mapped_column(...)`** holds the *database* details (length, defaults, keys). Together they define one column.
-- **`__table_args__`** is where table-level things go: indexes and constraints that involve more than "one column's type". It must be a **tuple** — note the trailing commas.
+- **`Mapped[...]`** is the *Python* type (what you get when you read `user.email`). **`mapped_column(...)`** holds the
+  *database* details (length, defaults, keys). Together they define one column.
+- **`__table_args__`** is where table-level things go: indexes and constraints that involve more than "one column's
+  type". It must be a **tuple** — note the trailing commas.
 
 **Do:** make `app/models/__init__.py`:
 
@@ -216,13 +229,15 @@ from app.models.user import User
 __all__ = ["User"]
 ```
 
-Why: Alembic only sees tables whose class has been *imported*. This file is the one place that imports every model. `__all__` just lists what this package exports.
+Why: Alembic only sees tables whose class has been *imported*. This file is the one place that imports every model.
+`__all__` just lists what this package exports.
 
 ---
 
 ## Part 4 — Alembic: turn the model into a real table
 
-**What Alembic is:** git for your database structure. Each change = one migration file (a Python script with `upgrade()` and `downgrade()`). Postgres remembers which migration it's at, in a small table called `alembic_version`.
+**What Alembic is:** git for your database structure. Each change = one migration file (a Python script with `upgrade()`
+and `downgrade()`). Postgres remembers which migration it's at, in a small table called `alembic_version`.
 
 **Do (from the repo root, venv active):**
 
@@ -231,11 +246,13 @@ alembic init -t async alembic
 ```
 
 This creates:
+
 - `alembic.ini` — Alembic's settings
 - `alembic/env.py` — the script Alembic runs to connect to your DB and compare it with your models
 - `alembic/versions/` — where migration files will appear (empty for now)
 
-`-t async` = use the template for async drivers like `asyncpg`. (So `psycopg2-binary` is **not** needed — remove it from `requirements.txt`.)
+`-t async` = use the template for async drivers like `asyncpg`. (So `psycopg2-binary` is **not** needed — remove it from
+`requirements.txt`.)
 
 **Do: edit `alembic/env.py`** — two changes.
 
@@ -247,7 +264,8 @@ from app.core.config import settings
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 ```
 
-Why: the URL contains your password. `alembic.ini` gets committed to git, so the URL must **not** live there. This reads it from `.env` through your settings instead.
+Why: the URL contains your password. `alembic.ini` gets committed to git, so the URL must **not** live there. This reads
+it from `.env` through your settings instead.
 
 Change 2. Find the line `target_metadata = None` and replace it with:
 
@@ -258,7 +276,8 @@ import app.models  # noqa: F401  (imports all models so Base.metadata knows ever
 target_metadata = Base.metadata
 ```
 
-Why: `target_metadata` is "what the database *should* look like". Alembic compares it with what Postgres *actually* has, and writes the difference as a migration. `# noqa` tells linters "yes, I import this without using it, on purpose".
+Why: `target_metadata` is "what the database *should* look like". Alembic compares it with what Postgres *actually* has,
+and writes the difference as a migration. `# noqa` tells linters "yes, I import this without using it, on purpose".
 
 **Do: generate the first migration:**
 
@@ -267,10 +286,12 @@ alembic revision --autogenerate -m "create users table"
 ```
 
 A new file appears in `alembic/versions/`. **Open it and read it.** You'll see:
+
 - `upgrade()` with `op.create_table("users", ...)` and `op.create_index(...)` ×2
 - `downgrade()` with the reverse: drop indexes, drop table
 
-Check both indexes are there, including the `lower(email)` one and the `WHERE phone_number IS NOT NULL`. Autogenerate is a **draft written by a robot** — you're the reviewer.
+Check both indexes are there, including the `lower(email)` one and the `WHERE phone_number IS NOT NULL`. Autogenerate is
+a **draft written by a robot** — you're the reviewer.
 
 **Do: apply it:**
 
@@ -306,7 +327,8 @@ alembic upgrade head     # redo → back
 
 ## Part 5 — Play with it (this is where it clicks)
 
-Create `playground.py` at the repo root (add `playground.py` to `.gitignore` — it's your scratch file):
+Create `../notes/playground.py` at the repo root (add `../notes/playground.py` to `.gitignore` — it's your scratch
+file):
 
 ```python
 import asyncio
@@ -324,7 +346,7 @@ async def main():
         user = User(email="Ali@Example.com", password_hash="not-a-real-hash")
         session.add(user)
         await session.commit()
-        await session.refresh(user)      # reload values Postgres generated (id, created_at)
+        await session.refresh(user)  # reload values Postgres generated (id, created_at)
         print("created:", user.id, user.email, user.created_at)
 
         # SELECT
@@ -350,11 +372,14 @@ async def main():
 asyncio.run(main())
 ```
 
-Run it: `python playground.py`. With `echo=True` you'll see **every SQL statement** SQLAlchemy generates — compare them with what you'd have written by hand in Notes.
+Run it: `python playground.py`. With `echo=True` you'll see **every SQL statement** SQLAlchemy generates — compare them
+with what you'd have written by hand in Notes.
 
 Things to notice:
+
 - `session.add()` doesn't send anything yet. `commit()` does.
-- `select(User).where(User.id == ...)` — `User.id == 5` isn't a True/False here; SQLAlchemy turns it into SQL `WHERE users.id = 5`.
+- `select(User).where(User.id == ...)` — `User.id == 5` isn't a True/False here; SQLAlchemy turns it into SQL
+  `WHERE users.id = 5`.
 - `scalar_one()` = "give me exactly one object, error if 0 or 2+".
 - The duplicate email (different capitals!) is refused **by Postgres**, thanks to your `LOWER(email)` index.
 
@@ -367,56 +392,72 @@ Run it twice. What happens the second time, and why? (Then clean up: `psql` → 
 Now you know the pattern. New things you'll need:
 
 **Foreign key** (a column pointing at another table):
+
 ```python
 category_id: Mapped[int | None] = mapped_column(
     BigInteger, ForeignKey("categories.id", ondelete="SET NULL")
 )
 ```
+
 `"categories.id"` = table name + column (the SQL names, not the class name).
 
 **Check constraint** (goes in `__table_args__`):
+
 ```python
 CheckConstraint("stock >= 0", name="chk_products_stock"),
 ```
+
 Always give constraints a `name` — error messages and future migrations refer to them by name.
 
 **Unique pair:**
+
 ```python
 UniqueConstraint("cart_id", "product_id", name="uq_cart_product"),
 ```
 
 **Money:** `Mapped[Decimal]` + `Numeric(12, 2)` (`from decimal import Decimal`).
 
-**Default value for a plain column:** `server_default=text("'active'")` (string — note the inner quotes) or `server_default=text("0")` (number).
+**Default value for a plain column:** `server_default=text("'active'")` (string — note the inner quotes) or
+`server_default=text("0")` (number).
 
 **Relationship** (Python-side shortcut between linked objects — no column is created):
+
 ```python
 # in Cart:
 items: Mapped[list["CartItem"]] = relationship(back_populates="cart")
 # in CartItem:
 cart: Mapped["Cart"] = relationship(back_populates="items")
 ```
-Now `cart.items` gives you a list of items and `item.cart` gives you the cart. Each side names the other in `back_populates`. Class names are in quotes because the other class might be in another file — SQLAlchemy looks them up once all models are imported (another job of `models/__init__.py`). Import with `from sqlalchemy.orm import relationship`.
+
+Now `cart.items` gives you a list of items and `item.cart` gives you the cart. Each side names the other in
+`back_populates`. Class names are in quotes because the other class might be in another file — SQLAlchemy looks them up
+once all models are imported (another job of `models/__init__.py`). Import with
+`from sqlalchemy.orm import relationship`.
 
 **Do:**
-1. Write `product.py` (Category, Product) **by yourself**, from `schema.sql`. Only after it works, compare with the ChatGPT version to see what you missed.
+
+1. Write `product.py` (Category, Product) **by yourself**, from `schema.sql`. Only after it works, compare with the
+   ChatGPT version to see what you missed.
 2. Add them to `models/__init__.py`.
-3. `alembic revision --autogenerate -m "create categories and products"` → read → `alembic upgrade head` → `\dt` in psql.
+3. `alembic revision --autogenerate -m "create categories and products"` → read → `alembic upgrade head` → `\dt` in
+   psql.
 4. Same for `cart.py` (Cart, CartItem) → migration.
 5. Same for `order.py` (Order, OrderItem, Payment) → migration.
 
-Notice: **one migration per step**, not one giant one. That's how real projects grow — and `alembic history` will show your schema's story.
+Notice: **one migration per step**, not one giant one. That's how real projects grow — and `alembic history` will show
+your schema's story.
 
 ---
 
 ## Cheat sheet
 
-| I want to… | Command |
-|---|---|
+| I want to…                            | Command                                        |
+|---------------------------------------|------------------------------------------------|
 | Create a migration from model changes | `alembic revision --autogenerate -m "message"` |
-| Apply all pending migrations | `alembic upgrade head` |
-| Undo the last migration | `alembic downgrade -1` |
-| See current DB version | `alembic current` |
-| See all migrations | `alembic history` |
+| Apply all pending migrations          | `alembic upgrade head`                         |
+| Undo the last migration               | `alembic downgrade -1`                         |
+| See current DB version                | `alembic current`                              |
+| See all migrations                    | `alembic history`                              |
 
-**Golden rule:** never edit a migration that has already been applied and shared. Need a change? Edit the model → create a **new** migration.
+**Golden rule:** never edit a migration that has already been applied and shared. Need a change? Edit the model → create
+a **new** migration.
