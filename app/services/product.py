@@ -1,6 +1,8 @@
 from decimal import Decimal
+import logging
 from typing import Literal
 
+from redis.exceptions import RedisError
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,6 +12,8 @@ from app.core.exceptions import ConflictError, NotFoundError
 from app.core.redis import redis_client
 from app.models import Category, Product
 from app.schemas import ProductCreate, ProductList, ProductRead
+
+logger = logging.getLogger(__name__)
 
 
 class ProductService:
@@ -41,11 +45,14 @@ class ProductService:
 
     @staticmethod
     async def invalidate_product_list_cache(product_ids: list[int] | None = None) -> None:
-        keys = [key async for key in redis_client.scan_iter("products:list:*")]
-        if product_ids:
-            keys.extend(f"product:{pid}" for pid in product_ids if pid is not None)
-        if keys:
-            await redis_client.delete(*keys)
+        try:
+            keys = [key async for key in redis_client.scan_iter("products:list:*")]
+            if product_ids:
+                keys.extend(f"product:{pid}" for pid in product_ids if pid is not None)
+            if keys:
+                await redis_client.delete(*keys)
+        except RedisError as exc:
+            logger.warning("Redis unavailable during cache invalidation: %s", exc)
 
     @staticmethod
     async def list_products(
@@ -59,9 +66,12 @@ class ProductService:
             category_id: int | None = None,
     ) -> ProductList:
         cache_key = f"products:list:{limit}:{offset}:{q}:{category_id}:{min_price}:{max_price}:{sort}"
-        cached = await redis_client.get(cache_key)
-        if cached:
-            return ProductList.model_validate_json(cached)
+        try:
+            cached = await redis_client.get(cache_key)
+            if cached:
+                return ProductList.model_validate_json(cached)
+        except RedisError as exc:
+            logger.warning("Redis unavailable during list_products read: %s", exc)
         conditions = [Product.is_active == True]
         if q is not None:
             conditions.append(Product.name.icontains(q, autoescape=True))
@@ -98,15 +108,21 @@ class ProductService:
             limit=limit,
             offset=offset,
         )
-        await redis_client.set(cache_key, product_list.model_dump_json(), ex=60)  # 60 seconds TTL
+        try:
+            await redis_client.set(cache_key, product_list.model_dump_json(), ex=60)  # 60 seconds TTL
+        except RedisError as exc:
+            logger.warning("Redis unavailable during list_products write: %s", exc)
         return product_list
 
     @staticmethod
     async def get_product_by_id(db: AsyncSession, product_id: int) -> ProductRead:
         cache_key = f"product:{product_id}"
-        cached = await redis_client.get(cache_key)
-        if cached:
-            return ProductRead.model_validate_json(cached)
+        try:
+            cached = await redis_client.get(cache_key)
+            if cached:
+                return ProductRead.model_validate_json(cached)
+        except RedisError as exc:
+            logger.warning("Redis unavailable during get_product_by_id read: %s", exc)
         query = (
             select(Product)
             .options(selectinload(Product.category))
@@ -117,5 +133,8 @@ class ProductService:
         if not product:
             raise NotFoundError(detail="Product not found")
         product_schema = ProductRead.model_validate(product)
-        await redis_client.set(f"product:{product_id}", product_schema.model_dump_json(), ex=3600)
-        return product
+        try:
+            await redis_client.set(cache_key, product_schema.model_dump_json(), ex=3600)
+        except RedisError as exc:
+            logger.warning("Redis unavailable during get_product_by_id write: %s", exc)
+        return product_schema
