@@ -1,12 +1,12 @@
 import re
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class UserCreate(BaseModel):
-    email: EmailStr
-    password: str
+    email: EmailStr = Field(examples=["user@example.com"])
+    password: str = Field(examples=["Password123!"])
 
     @field_validator("password")
     @classmethod

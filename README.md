@@ -35,7 +35,7 @@ REST API for an e-commerce store built with FastAPI, PostgreSQL, Redis, Celery, 
 │   ├── services/          # Business logic (CartService, ProductService, OrderService, PaymentService)
 │   ├── main.py            # FastAPI app entrypoint and exception handlers
 │   └── worker.py          # Celery worker configuration and tasks
-├── docs/architecture/     # SQL schema reference (schema.sql) and ERD (Schema.jpg)
+├── docs/architecture/     # PostgreSQL DDL schema reference (schema.sql) and ERD (schema.jpg)
 ├── tests/                 # Async integration and concurrency tests
 ├── Dockerfile
 └── docker-compose.yml
@@ -62,7 +62,7 @@ REST API for an e-commerce store built with FastAPI, PostgreSQL, Redis, Celery, 
 | `GET` | `/health` | Public | App health check |
 | `GET` | `/health/db` | Public | Database connectivity check |
 
-Database schema details can be found in [docs/architecture/schema.sql](docs/architecture/schema.sql) and [docs/architecture/Schema.jpg](docs/architecture/Schema.jpg).
+Database schema details can be found in [docs/architecture/schema.sql](docs/architecture/schema.sql) and [docs/architecture/schema.jpg](docs/architecture/schema.jpg).
 
 ## Getting Started
 

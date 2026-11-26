@@ -17,8 +17,6 @@ class ForbiddenError(AppHTTPError):
 
 
 class DomainError(Exception):
-    """Base domain exception independent of HTTP."""
-
     def __init__(self, message: str = "A domain error occurred", detail: str | None = None):
         self.message = detail or message
         super().__init__(self.message)
@@ -35,7 +33,6 @@ class ConflictError(DomainError):
 
 
 class CheckoutError(DomainError):
-    """Base error for checkout operations."""
     pass
 
 
