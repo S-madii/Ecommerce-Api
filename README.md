@@ -1,122 +1,79 @@
 # Commerce API
 
-An asynchronous e-commerce backend built with **FastAPI**, **PostgreSQL 16**, **SQLAlchemy 2.0 (`asyncpg`)**, **Redis**, **Celery**, and **Stripe**.
+![CI](https://github.com/S-madii/Ecommerce-Api/actions/workflows/ci.yml/badge.svg)
 
----
+REST API for an e-commerce store built with FastAPI, PostgreSQL, Redis, Celery, and Stripe. It provides the backend needed to run a storefront: user authentication with customer/admin roles, a searchable product catalog, persistent shopping carts, concurrent checkout with inventory locking, payment webhooks, and background email tasks.
 
-## 1. System Overview
+## Features
 
-```mermaid
-flowchart TD
-    Client["Client / Frontend"]
+- **Authentication & Roles**: JWT login/signup with `bcrypt` password hashing and role-based access (`customer` and `admin`). Only admins can create or modify categories and products.
+- **Product Catalog**: Paginated product listing with keyword search (`q`), category filtering, min/max price filters, and sorting (`newest`, `price_asc`, `price_desc`).
+- **Redis Caching**: Product details and catalog queries use a cache-aside pattern via `redis.asyncio`. Cache keys are invalidated when products are created or stock changes at checkout. If Redis is unavailable, requests fall back to PostgreSQL.
+- **Shopping Cart**: Persistent active cart per user with stock validation and automatic line-item and cart total calculation.
+- **Concurrency-Safe Checkout**: Locks product rows during checkout using `SELECT ... FOR UPDATE` ordered by product ID to prevent race conditions (overselling the last item) and deadlocks. Order items store a snapshot of the product name, SKU, and price at purchase time.
+- **Stripe Payments & Webhooks**: Creates a Stripe `PaymentIntent` on checkout (releasing DB locks before the network call and rolling back stock if Stripe fails). A `/payments/webhook` endpoint verifies the `Stripe-Signature` HMAC header on the raw payload and marks the order as confirmed.
+- **Background Tasks**: After payment confirmation commits to the database, a Celery worker processes the order confirmation email task asynchronously via Redis.
 
-    subgraph API ["FastAPI Application (app/)"]
-        AuthRouter["/auth (JWT Auth)"]
-        CatRouter["/categories (Catalog)"]
-        ProdRouter["/products (Filtered / Paginated)"]
-        CartRouter["/cart (User Cart Session)"]
-        OrderRouter["/orders (Checkout Engine)"]
-        PayRouter["/payments (Webhook Listener)"]
-    end
+## Tech Stack
 
-    subgraph ServiceLayer ["Service Layer (app/services/)"]
-        CartService["CartService<br/>- Active cart session<br/>- Item mutations & subtotals"]
-        ProdService["ProductService<br/>- Catalog filtering & search<br/>- Cache-aside & invalidation"]
-        OrderService["OrderService<br/>- Decoupled checkout<br/>- Pessimistic locking & compensation"]
-        PayService["PaymentService<br/>- Stripe Intent creation<br/>- HMAC webhook verification"]
-    end
+- **API**: Python 3.12+, FastAPI, Pydantic v2
+- **Database**: PostgreSQL 16, SQLAlchemy 2.0 (asyncpg), Alembic
+- **Cache & Queue**: Redis 7, Celery
+- **Payments**: Stripe API
+- **Testing & DevOps**: pytest, pytest-asyncio, httpx, Docker Compose, GitHub Actions
 
-    subgraph Storage ["Persistence & Messaging"]
-        PG[("PostgreSQL 16")]
-        Redis[("Redis 7<br/>(Cache & Broker)")]
-        Worker["Celery Worker<br/>(app/worker.py)"]
-    end
+## Project Structure
 
-    subgraph External ["Third-Party APIs"]
-        Stripe["Stripe API"]
-    end
-
-    Client <--> API
-    CartRouter --> CartService
-    ProdRouter --> ProdService
-    OrderRouter --> OrderService
-    OrderService --> PayService
-    PayRouter --> PayService
-    ProdService <--> Redis
-    PayRouter -.->|".delay(order_id)"| Redis
-    Redis -.-> Worker
-    PayService <--> Stripe
-    ServiceLayer <--> PG
+```text
+├── alembic/               # Database migration scripts
+├── app/
+│   ├── core/              # Settings, JWT security, Redis client, domain exceptions
+│   ├── db/                # Async SQLAlchemy engine and session dependency
+│   ├── models/            # SQLAlchemy ORM models (User, Product, Category, Cart, Order, Payment)
+│   ├── routers/           # FastAPI route handlers
+│   ├── schemas/           # Pydantic request/response models
+│   ├── services/          # Business logic (CartService, ProductService, OrderService, PaymentService)
+│   ├── main.py            # FastAPI app entrypoint and exception handlers
+│   └── worker.py          # Celery worker configuration and tasks
+├── docs/architecture/     # SQL schema reference (schema.sql) and ERD (Schema.jpg)
+├── tests/                 # Async integration and concurrency tests
+├── Dockerfile
+└── docker-compose.yml
 ```
 
----
+## API Endpoints
 
-## 2. Architecture & Design Patterns
+| Method | Path | Access | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/signup` | Public | Register a new user account |
+| `POST` | `/auth/login` | Public | Log in and receive a Bearer JWT |
+| `GET` | `/auth/me` | Authenticated | Get current user profile and role |
+| `GET` | `/categories` | Public | List all categories |
+| `POST` | `/categories` | Admin | Create a category |
+| `GET` | `/products` | Public | List products (`q`, `category_id`, `min_price`, `max_price`, `sort`, `limit`, `offset`) |
+| `GET` | `/products/{id}` | Public | Get a single product by ID |
+| `POST` | `/products` | Admin | Create a product and invalidate list cache |
+| `GET` | `/cart` | Authenticated | View active cart and totals |
+| `POST` | `/cart/items` | Authenticated | Add an item to the cart |
+| `PATCH` | `/cart/items/{id}` | Authenticated | Update item quantity in the cart |
+| `DELETE` | `/cart/items/{id}` | Authenticated | Remove an item from the cart |
+| `POST` | `/orders/checkout` | Authenticated | Lock stock, create order, and return Stripe `client_secret` |
+| `POST` | `/payments/webhook` | Stripe | Verify webhook signature, confirm order, trigger Celery task |
+| `GET` | `/health` | Public | App health check |
+| `GET` | `/health/db` | Public | Database connectivity check |
 
-### A. Layered Structure
-1. **Presentation Layer (`app/routers/`)**: Route controllers handling HTTP status codes, query/path validation, dependency injection, and transaction commit boundaries.
-2. **Service Layer (`app/services/`)**: Framework-agnostic domain logic raising pure Python domain exceptions (`NotFoundError`, `ConflictError`, `CheckoutError`), mapped centrally in `app/main.py`.
-3. **Persistence Layer (`app/models/`, `app/db/`)**: SQLAlchemy 2.0 declarative models (`Mapped[...]`), asynchronous session factory (`AsyncSession`), and Alembic migrations.
-4. **Schema Layer (`app/schemas/`)**: Pydantic v2 input validation and response serialization (`from_attributes=True`).
+Database schema details can be found in [docs/architecture/schema.sql](docs/architecture/schema.sql) and [docs/architecture/Schema.jpg](docs/architecture/Schema.jpg).
 
-### B. Concurrency & Inventory Protection (`POST /orders/checkout`)
-- **Pessimistic Row-Level Locking**: Product inventory rows are locked via `select(Product).with_for_update().execution_options(populate_existing=True)`.
-- **Deadlock Prevention**: Product IDs are sorted in ascending order (`Product.id.asc()`) prior to lock acquisition so concurrent transactions never form circular lock waits.
-- **Lock Decoupling & Compensation**: Database locks are committed before initiating external Stripe network calls. If PaymentIntent creation fails, a compensating transaction cancels the order and restores inventory atomically.
+## Getting Started
 
-### C. Caching & Background Workers
-- **Cache-Aside Pattern**: `GET /products/{id}` (1h TTL) and `GET /products` (60s TTL) read through `redis.asyncio` and degrade gracefully to PostgreSQL if Redis is unreachable.
-- **Active Invalidation**: Product creation and checkout stock updates evict affected `product:{id}` and `products:list:*` keys via `scan_iter`.
-- **Asynchronous Task Queue**: Confirmed payment webhooks dispatch `send_order_confirmation_email.delay(order.id)` to Celery over Redis after the database transaction commits.
+### 1. Environment Variables
 
-### D. Payment Processing (`app/services/payment.py`)
-- **Stripe PaymentIntent**: Card details are handled client-side; the backend issues a `client_secret` calculated in integer cents (`int((order.total * 100).to_integral_value())`).
-- **HMAC-SHA256 Webhook Verification**: `POST /payments/webhook` validates `Stripe-Signature` against raw request bytes (`await request.body()`) and processes `payment_intent.succeeded` events idempotently.
+Copy the example environment file and fill in your keys:
 
----
+```bash
+cp .env.example .env
+```
 
-## 3. API Endpoints
-
-| Method | Endpoint | Auth | Description |
-|---|---|---|---|
-| `POST` | `/auth/signup` | Public | Register user with `bcrypt` password hashing (409 on duplicate email) |
-| `POST` | `/auth/login` | Public | Authenticate user with constant-time dummy hash check, return JWT |
-| `GET` | `/auth/me` | Bearer JWT | Retrieve authenticated user profile |
-| `GET` | `/categories` | Public | List categories sorted by name |
-| `POST` | `/categories` | Admin JWT | Create category (requires `role = 'admin'`) |
-| `GET` | `/products` | Public | Paginated catalog with search (`q`), price bounds (`min_price`, `max_price`), `category_id`, and sort (`price_asc`, `price_desc`, `newest`) |
-| `POST` | `/products` | Admin JWT | Create product and invalidate cached product listings (requires `role = 'admin'`) |
-| `GET` | `/products/{id}` | Public | Retrieve single product details with eager-loaded category |
-| `GET` | `/cart` | Bearer JWT | Retrieve or auto-create active user cart with computed totals |
-| `POST` | `/cart/items` | Bearer JWT | Add product to cart or increment quantity with stock checks |
-| `PATCH` | `/cart/items/{id}` | Bearer JWT | Update item quantity in active cart |
-| `DELETE` | `/cart/items/{id}` | Bearer JWT | Remove item from active cart (`204 No Content`) |
-| `POST` | `/orders/checkout` | Bearer JWT | Reserve stock under `FOR UPDATE` lock, snapshot items, create Stripe PaymentIntent |
-| `POST` | `/payments/webhook` | Stripe Sig | Verify webhook signature, mark order confirmed, enqueue Celery confirmation task |
-| `GET` | `/health` | Public | Application liveness check |
-| `GET` | `/health/db` | Public | PostgreSQL connectivity check (`SELECT 1`) |
-
----
-
-## 4. Database Schema
-
-Managed via Alembic (`alembic/`):
-- **`users`**: Credentials with functional unique index on `lower(email)`.
-- **`categories`**: Product categories with unique non-empty name constraints.
-- **`products`**: Catalog items with `Numeric(12, 2)` price and `stock >= 0` check constraints.
-- **`carts`**: User cart sessions enforcing a partial unique index (`uq_carts_one_active_per_user WHERE status = 'active'`).
-- **`cart_items`**: Line items tied to an active cart.
-- **`orders`**: Order headers with monetary totals and `JSONB` shipping address.
-- **`order_items`**: Immutable historical snapshots (`product_name`, `sku`, `unit_price`, `quantity`).
-- **`payments`**: Payment state tracking (`provider`, `provider_payment_id`, `status`).
-
-Schema references: [docs/architecture/schema.sql](docs/architecture/schema.sql) | [docs/architecture/Schema.jpg](docs/architecture/Schema.jpg)
-
----
-
-## 5. Getting Started
-
-### Environment Variables (`.env`)
 ```ini
 DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/commerce
 REDIS_URL=redis://localhost:6379/0
@@ -126,13 +83,20 @@ STRIPE_WEBHOOK_SECRET=whsec_your_secret
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
-### Run with Docker Compose
+### 2. Run with Docker Compose
+
+Starts PostgreSQL, Redis, runs Alembic migrations, and launches the FastAPI server and Celery worker:
+
 ```bash
 docker compose up --build -d
 ```
-Starts `postgres`, `redis`, runs `alembic upgrade head`, boots `api` on `http://localhost:8000` (Swagger UI at `/docs`), and starts `celery_worker`.
 
-### Run Locally
+The API will be available at `http://localhost:8000` (Swagger docs at `http://localhost:8000/docs`).
+
+### 3. Run Locally (Without Docker)
+
+Requires PostgreSQL and Redis running locally:
+
 ```bash
 python -m venv .venv
 source .venv/bin/activate
@@ -140,11 +104,19 @@ pip install -r requirements.txt
 
 alembic upgrade head
 uvicorn app.main:app --reload
+```
+
+In a second terminal, start the Celery worker:
+
+```bash
+source .venv/bin/activate
 celery -A app.worker.celery_app worker --loglevel=info
 ```
 
-### Run Tests
-Requires a local PostgreSQL instance (uses isolated `commerce_test` database) and Redis:
+## Running Tests
+
+Tests use an isolated `commerce_test` PostgreSQL database and test auth, RBAC, catalog filtering, Redis cache invalidation, concurrent checkouts (`asyncio.gather` on `stock=1`), and Stripe webhooks:
+
 ```bash
 pytest -v
 ```

@@ -15,7 +15,7 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 
-TEST_DATABASE_URL = str(make_url(settings.DATABASE_URL).set(database="commerce_test"))
+TEST_DATABASE_URL = make_url(settings.DATABASE_URL).set(database="commerce_test").render_as_string(hide_password=False)
 
 test_engine = create_async_engine(
     TEST_DATABASE_URL,

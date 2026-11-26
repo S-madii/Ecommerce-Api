@@ -1,4 +1,5 @@
 __pycache__
+*.pyc
 *.pyo
 *.pyd
 .Python
@@ -15,4 +16,4 @@ htmlcov/
 .vscode
 *.log
 docs/
-docs/notes/playground.py
+tests/
