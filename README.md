@@ -85,6 +85,9 @@ SECRET_KEY=your_jwt_secret_key
 STRIPE_SECRET_KEY=sk_test_your_key
 STRIPE_WEBHOOK_SECRET=whsec_your_secret
 ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=7
+AUTH_RATE_LIMIT_PER_MINUTE=10
+ADMIN_EMAIL=admin@example.com
 ```
 
 ### 2. Run with Docker Compose
