@@ -1,3 +1,5 @@
+import asyncio
+
 import stripe
 from app.core import settings
 from app.models import Order
@@ -5,10 +7,11 @@ from app.models import Order
 
 class PaymentService:
     @staticmethod
-    def create_payment_intent(order: Order):
+    async def create_payment_intent(order: Order):
         stripe.api_key = settings.STRIPE_SECRET_KEY.get_secret_value()
         amount_cents = int((order.total * 100).to_integral_value())
-        intent = stripe.PaymentIntent.create(
+        intent = await asyncio.to_thread(
+            stripe.PaymentIntent.create,
             amount=amount_cents,
             currency="usd",
             metadata={"order_id": str(order.id)},

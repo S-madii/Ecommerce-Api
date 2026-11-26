@@ -1,3 +1,5 @@
+import asyncio
+
 from bcrypt import hashpw, gensalt, checkpw
 from fastapi import APIRouter
 from fastapi import Depends, HTTPException
@@ -16,7 +18,7 @@ router = APIRouter()
 
 @router.post("/signup", response_model=UserRead, status_code=201)
 async def signup(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    hashed = hashpw(user.password.encode('utf-8'), gensalt()).decode('utf-8')
+    hashed = (await asyncio.to_thread(hashpw, user.password.encode('utf-8'), gensalt())).decode('utf-8')
     new_user = User(email=user.email.lower(), password_hash=hashed)
     db.add(new_user)
     try:
@@ -33,9 +35,10 @@ async def login(user: UserCreate, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(func.lower(User.email) == user.email.lower()))
     user_db = result.scalar_one_or_none()
     if user_db is None:
-        checkpw(user.password.encode('utf-8'), DUMMY_HASH)
+        await asyncio.to_thread(checkpw, user.password.encode('utf-8'), DUMMY_HASH)
         raise HTTPException(status_code=401, detail="No such user or incorrect password")
-    if not checkpw(user.password.encode('utf-8'), user_db.password_hash.encode('utf-8')):
+    is_valid = await asyncio.to_thread(checkpw, user.password.encode('utf-8'), user_db.password_hash.encode('utf-8'))
+    if not is_valid:
         raise HTTPException(status_code=401, detail="No such user or incorrect password")
     token = create_access_token(user_db.id)
     return Token(access_token=token, token_type="bearer")

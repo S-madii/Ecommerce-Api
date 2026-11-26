@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import InsufficientStockError
 from app.core.security import get_current_user
 from app.db import get_db
 from app.models import User
@@ -25,10 +24,7 @@ async def add_item_to_cart(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        return await CartService.add_item(db, current_user.id, item)
-    except InsufficientStockError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return await CartService.add_item(db, current_user.id, item)
 
 
 @router.patch("/items/{item_id}", response_model=CartItemRead, status_code=status.HTTP_200_OK)
@@ -38,10 +34,7 @@ async def update_cart_item(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        return await CartService.update_item_quantity(db, current_user.id, item_id, item)
-    except InsufficientStockError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return await CartService.update_item_quantity(db, current_user.id, item_id, item)
 
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

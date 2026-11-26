@@ -40,8 +40,10 @@ class ProductService:
         return new_product
 
     @staticmethod
-    async def invalidate_product_list_cache() -> None:
+    async def invalidate_product_list_cache(product_ids: list[int] | None = None) -> None:
         keys = [key async for key in redis_client.scan_iter("products:list:*")]
+        if product_ids:
+            keys.extend(f"product:{pid}" for pid in product_ids if pid is not None)
         if keys:
             await redis_client.delete(*keys)
 

@@ -1,5 +1,3 @@
-import http
-
 from fastapi import APIRouter, Request, Header, Depends, HTTPException, status
 import stripe as stripe
 
@@ -7,7 +5,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Order, Payment
-from app.schemas import payment
 
 from app.db import get_db
 from app.services import PaymentService
@@ -30,7 +27,9 @@ async def stripe_webhook(
     if event["type"] != "payment_intent.succeeded":
         return {"status": "ignored"}
     payment_intent = event["data"]["object"]
-    order_id = payment_intent["metadata"].get("order_id")
+    order_id = payment_intent.get("metadata", {}).get("order_id")
+    if not order_id:
+        raise HTTPException(status_code=400, detail="Missing order_id in metadata")
     order = await db.get(Order, int(order_id))
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")

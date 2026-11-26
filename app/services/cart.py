@@ -1,5 +1,6 @@
 from decimal import Decimal
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -23,7 +24,10 @@ class CartService:
         if not cart:
             cart = Cart(user_id=user_id, status="active")
             db.add(cart)
-            await db.commit()
+            try:
+                await db.commit()
+            except IntegrityError:
+                await db.rollback()
             result = await db.execute(stmt)
             cart = result.scalar_one()
 

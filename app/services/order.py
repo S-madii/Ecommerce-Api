@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.core.exceptions import EmptyCartError, InsufficientStockError, CheckoutError
 from app.models import Cart, CartItem, Order, OrderItem, Payment, Product, User
 from app.services.payment import PaymentService
+from app.services.product import ProductService
 
 
 class OrderService:
@@ -94,7 +95,7 @@ class OrderService:
             shipping_address,
         )
         try:
-            intent = PaymentService.create_payment_intent(order)
+            intent = await PaymentService.create_payment_intent(order)
         except Exception as e:
             order.status = "cancelled"
             for item in order.items:
@@ -104,6 +105,9 @@ class OrderService:
                     .values(stock=Product.stock + item.quantity)
                 )
             await db.commit()
+            await ProductService.invalidate_product_list_cache(
+                [item.product_id for item in order.items if item.product_id is not None]
+            )
             raise CheckoutError("Failed to create payment intent") from e
         payment = Payment(
             order_id=order.id,
@@ -114,5 +118,8 @@ class OrderService:
         )
         db.add(payment)
         await db.commit()
+        await ProductService.invalidate_product_list_cache(
+            [item.product_id for item in order.items if item.product_id is not None]
+        )
         await db.refresh(order, attribute_names=["items"])
         return order, intent.client_secret
