@@ -34,7 +34,9 @@ Quick-reference study sheets covering decisions, code patterns, and traps from e
 | **A6** | Cart & Concurrency | `SELECT ... FOR UPDATE`, sorted deadlock prevention, price snapshots | [[notes/A6_concurrency_checkout\|A6: Concurrency & Checkout]] |
 | **A7** | Stripe Payments | Zero-trust PaymentIntent, integer cents math, `db.flush()`, HMAC webhooks | [[notes/A7_stripe_payments\|A7: Stripe Payments]] |
 | **A8** | Caching & Celery | Async Redis pool, cache-aside pattern, active invalidation, Celery IPC worker | [[notes/A8_redis_celery\|A8: Caching & Workers]] |
-| **A9** | Architecture Hardening | Domain exceptions, global translation, transaction boundary, pagination defense | [[notes/A9_production_architecture_hardening\|A9: Architecture Hardening]] |
+| **A9.1** | Architecture Hardening | Domain exceptions, global translation, transaction boundary, pagination defense | [[notes/A9_production_architecture_hardening\|A9.1: Architecture Hardening]] |
+| **A9.2** | Docker & Compose | Layer caching, `0.0.0.0` binding, internal DNS networking, healthchecks, volumes | [[notes/A9_docker_containerization\|A9.2: Docker & Compose]] |
+| **A9.3** | Async Testing (`pytest`) | `ASGITransport`, `dependency_overrides`, `commerce_test` isolation, `asyncio.gather` lock tests | [[notes/A9_pytest_asyncio_testing\|A9.3: Async Testing]] |
 
 ---
 

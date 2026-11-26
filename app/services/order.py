@@ -41,6 +41,7 @@ class OrderService:
             .where(Product.id.in_(product_ids))
             .order_by(Product.id.asc())
             .with_for_update()
+            .execution_options(populate_existing=True)
         )
         result = await db.execute(stmt)
         locked_products = result.scalars().all()
@@ -52,8 +53,9 @@ class OrderService:
             product = products_by_id[item.product_id]
 
             if product.stock < item.quantity:
+                product_name = product.name
                 await db.rollback()
-                raise InsufficientStockError(product.name)
+                raise InsufficientStockError(product_name)
         total_amount = Decimal('0.00')
         order_items_to_create = []
         for item in cart.cart_items:
