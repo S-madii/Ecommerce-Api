@@ -71,7 +71,6 @@ async def test_webhook_confirms_order_and_dispatches_celery(
         patch("app.services.payment.PaymentService.verify_payment_intent", return_value=fake_stripe_event),
         patch("app.routers.payments.send_order_confirmation_email.delay") as mock_celery_delay,
     ):
-        # 1st webhook delivery -> confirms order and triggers Celery task
         resp1 = await client.post(
             "/payments/webhook",
             content=b'{"id": "evt_1"}',
@@ -81,7 +80,6 @@ async def test_webhook_confirms_order_and_dispatches_celery(
         assert resp1.json()["status"] == "success"
         mock_celery_delay.assert_called_once_with(order_id)
 
-        # 2nd duplicate webhook delivery -> idempotent (does NOT send duplicate email!)
         resp2 = await client.post(
             "/payments/webhook",
             content=b'{"id": "evt_1"}',
@@ -91,7 +89,6 @@ async def test_webhook_confirms_order_and_dispatches_celery(
         assert resp2.json()["status"] == "Already Confirmed"
         assert mock_celery_delay.call_count == 1
 
-    # Verify order status in PostgreSQL transitioned to 'confirmed'
     order_in_db = await db_session.get(Order, order_id)
     assert order_in_db is not None
     assert order_in_db.status == "confirmed"

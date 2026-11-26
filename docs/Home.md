@@ -37,6 +37,7 @@ Quick-reference study sheets covering decisions, code patterns, and traps from e
 | **A9.1** | Architecture Hardening | Domain exceptions, global translation, transaction boundary, pagination defense | [[notes/A9_production_architecture_hardening\|A9.1: Architecture Hardening]] |
 | **A9.2** | Docker & Compose | Layer caching, `0.0.0.0` binding, internal DNS networking, healthchecks, volumes | [[notes/A9_docker_containerization\|A9.2: Docker & Compose]] |
 | **A9.3** | Async Testing (`pytest`) | `ASGITransport`, `dependency_overrides`, `commerce_test` isolation, `asyncio.gather` lock tests | [[notes/A9_pytest_asyncio_testing\|A9.3: Async Testing]] |
+| **A9.4** | CI/CD (GitHub Actions) | Ephemeral cloud runners, Postgres/Redis service containers, automated `pytest` gating | [[notes/A9_cicd_github_actions\|A9.4: CI/CD Pipeline]] |
 
 ---
 

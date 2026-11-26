@@ -1,14 +1,14 @@
 # PROGRESS: commerce-api
 
-Last updated: 2026-11-23. Source of truth for the plan: Roadmap v4. Update this file only when asked.
+Last updated: 2026-11-26. Source of truth for the plan: Roadmap v4. Update this file only when asked.
 
 ---
 
 ## Where we are
 
 - **A1 Setup:** done.
-- **A2 Schema design:** done. Reference is `docs/schema.sql`.
-- **A3 Database layer:** done. All 9 tables exist in Postgres. Rollback round trip tested. Head revision is
+- **A2 Schema design:** done. Reference is `docs/architecture/schema.sql`.
+- **A3 Database layer:** done. All tables exist in Postgres. Rollback round trip tested. Head revision is
   `e4cdc75b1de7`.
 - **A4 JWT authentication:** done. Verified signup (201 & 409), login returning JWT token, and `/auth/me` with Bearer
   auth (200 & 401).
@@ -24,9 +24,11 @@ Last updated: 2026-11-23. Source of truth for the plan: Roadmap v4. Update this 
   and order/payment status state machine transition to 'confirmed'/'succeeded'.
 - **A8 Redis Caching & Celery:** done 100%. Async Redis client connection pool (`redis.asyncio`), cache-aside pattern on
   `get_product_by_id` (1h TTL) and `list_products` (60s TTL), active pattern invalidation (`products:list:*`) on product
-  creation, and Celery background task (`send_order_confirmation_email`) dispatched asynchronously from payment webhook.
-- **A9 Production Ready & DevOps:** next up (Docker Compose, automated testing with Pytest, CI/CD pipeline, root README
-  showcase).
+  creation and stock changes, fail-open cache resilience, and Celery background task (`send_order_confirmation_email`)
+  dispatched asynchronously from payment webhook.
+- **A9 Production Ready & DevOps:** done 100%. Domain exception decoupling & global exception handlers, `Dockerfile` +
+  `docker-compose.yml` multi-container orchestration, 10-test `pytest-asyncio` suite (`tests/` including `asyncio.gather`
+  row-lock concurrency verification), GitHub Actions CI pipeline (`.github/workflows/ci.yml`), and root `README.md`.
 
 ## Files
 

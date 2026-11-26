@@ -30,8 +30,8 @@ async def test_checkout_empty_cart_rejected(client: httpx.AsyncClient):
 
 @pytest.mark.asyncio
 async def test_concurrent_checkout_prevents_overselling(
-        client: httpx.AsyncClient,
-        db_session: AsyncSession,
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
 ):
     headers_a = await _register_and_login(client, "buyer_a@example.com")
     headers_b = await _register_and_login(client, "buyer_b@example.com")
@@ -59,8 +59,8 @@ async def test_concurrent_checkout_prevents_overselling(
 
     fake_intent = SimpleNamespace(id="pi_test_concurrent_123", client_secret="pi_test_secret_123")
     with patch(
-            "app.services.payment.PaymentService.create_payment_intent",
-            new=AsyncMock(return_value=fake_intent),
+        "app.services.payment.PaymentService.create_payment_intent",
+        new=AsyncMock(return_value=fake_intent),
     ):
         resp_a, resp_b = await asyncio.gather(
             client.post("/orders/checkout", json=checkout_payload, headers=headers_a),

@@ -109,7 +109,7 @@ class ProductService:
             offset=offset,
         )
         try:
-            await redis_client.set(cache_key, product_list.model_dump_json(), ex=60)  # 60 seconds TTL
+            await redis_client.set(cache_key, product_list.model_dump_json(), ex=60)
         except RedisError as exc:
             logger.warning("Redis unavailable during list_products write: %s", exc)
         return product_list

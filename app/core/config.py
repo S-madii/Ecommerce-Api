@@ -1,4 +1,4 @@
-from pydantic import SecretStr  # Access the actual value via settings.SECRET_KEY.get_secret_value()
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
