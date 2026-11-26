@@ -3,14 +3,21 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 import stripe
 
-from app.models import Order
+from app.models import Order, User
 
 
-async def _create_order_via_checkout(client: httpx.AsyncClient, intent_id: str = "pi_webhook_test_1") -> int:
+async def _create_order_via_checkout(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    intent_id: str = "pi_webhook_test_1",
+) -> int:
     await client.post("/auth/signup", json={"email": "payer@example.com", "password": "Password123!"})
+    await db_session.execute(update(User).where(User.email == "payer@example.com").values(role="admin"))
+    await db_session.commit()
     login = await client.post("/auth/login", json={"email": "payer@example.com", "password": "Password123!"})
     headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
 
@@ -55,7 +62,7 @@ async def test_webhook_confirms_order_and_dispatches_celery(
     client: httpx.AsyncClient,
     db_session: AsyncSession,
 ):
-    order_id = await _create_order_via_checkout(client, intent_id="pi_live_999")
+    order_id = await _create_order_via_checkout(client, db_session, intent_id="pi_live_999")
 
     fake_stripe_event = {
         "type": "payment_intent.succeeded",

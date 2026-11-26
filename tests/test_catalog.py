@@ -1,19 +1,38 @@
 import httpx
 import pytest
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis import redis_client
+from app.models import User
 
 
-async def _get_auth_headers(client: httpx.AsyncClient, email: str = "admin@example.com") -> dict[str, str]:
+async def _get_admin_headers(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+    email: str = "admin@example.com",
+) -> dict[str, str]:
     await client.post("/auth/signup", json={"email": email, "password": "Password123!"})
+    await db_session.execute(update(User).where(User.email == email).values(role="admin"))
+    await db_session.commit()
     resp = await client.post("/auth/login", json={"email": email, "password": "Password123!"})
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.mark.asyncio
-async def test_create_product_and_sku_conflict(client: httpx.AsyncClient):
-    headers = await _get_auth_headers(client)
+async def test_create_product_rbac_and_sku_conflict(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+):
+    await client.post("/auth/signup", json={"email": "customer@example.com", "password": "Password123!"})
+    cust_login = await client.post("/auth/login", json={"email": "customer@example.com", "password": "Password123!"})
+    customer_headers = {"Authorization": f"Bearer {cust_login.json()['access_token']}"}
+
+    forbidden_cat = await client.post("/categories", json={"name": "Electronics"}, headers=customer_headers)
+    assert forbidden_cat.status_code == 403
+
+    headers = await _get_admin_headers(client, db_session)
 
     cat_resp = await client.post("/categories", json={"name": "Electronics"}, headers=headers)
     assert cat_resp.status_code == 201
@@ -27,6 +46,9 @@ async def test_create_product_and_sku_conflict(client: httpx.AsyncClient):
         "stock": 15,
         "category_id": category_id,
     }
+    forbidden_prod = await client.post("/products", json=prod_payload, headers=customer_headers)
+    assert forbidden_prod.status_code == 403
+
     prod_resp = await client.post("/products", json=prod_payload, headers=headers)
     assert prod_resp.status_code == 201
     assert prod_resp.json()["sku"] == "KB-001"
@@ -37,8 +59,11 @@ async def test_create_product_and_sku_conflict(client: httpx.AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_catalog_filtering_and_sorting(client: httpx.AsyncClient):
-    headers = await _get_auth_headers(client)
+async def test_catalog_filtering_and_sorting(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+):
+    headers = await _get_admin_headers(client, db_session)
 
     cat_resp = await client.post("/categories", json={"name": "Hardware"}, headers=headers)
     cat_id = cat_resp.json()["id"]
@@ -68,8 +93,11 @@ async def test_catalog_filtering_and_sorting(client: httpx.AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_redis_caching_and_invalidation(client: httpx.AsyncClient):
-    headers = await _get_auth_headers(client)
+async def test_redis_caching_and_invalidation(
+    client: httpx.AsyncClient,
+    db_session: AsyncSession,
+):
+    headers = await _get_admin_headers(client, db_session)
 
     p1 = await client.post(
         "/products",

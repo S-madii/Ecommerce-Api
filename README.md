@@ -83,9 +83,9 @@ flowchart TD
 | `POST` | `/auth/login` | Public | Authenticate user with constant-time dummy hash check, return JWT |
 | `GET` | `/auth/me` | Bearer JWT | Retrieve authenticated user profile |
 | `GET` | `/categories` | Public | List categories sorted by name |
-| `POST` | `/categories` | Bearer JWT | Create category |
+| `POST` | `/categories` | Admin JWT | Create category (requires `role = 'admin'`) |
 | `GET` | `/products` | Public | Paginated catalog with search (`q`), price bounds (`min_price`, `max_price`), `category_id`, and sort (`price_asc`, `price_desc`, `newest`) |
-| `POST` | `/products` | Bearer JWT | Create product and invalidate cached product listings |
+| `POST` | `/products` | Admin JWT | Create product and invalidate cached product listings (requires `role = 'admin'`) |
 | `GET` | `/products/{id}` | Public | Retrieve single product details with eager-loaded category |
 | `GET` | `/cart` | Bearer JWT | Retrieve or auto-create active user cart with computed totals |
 | `POST` | `/cart/items` | Bearer JWT | Add product to cart or increment quantity with stock checks |

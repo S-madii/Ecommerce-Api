@@ -4,7 +4,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.security import get_current_user
+from app.core.security import require_admin
 from app.db import get_db
 from app.models import User
 from app.schemas import ProductCreate, ProductList, ProductRead
@@ -17,7 +17,7 @@ router = APIRouter()
 async def create_product(
     product: ProductCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     new_product = await ProductService.create_product(db, product)
     await db.commit()

@@ -4,13 +4,22 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
+from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Product
+from app.models import Product, User
 
 
-async def _register_and_login(client: httpx.AsyncClient, email: str) -> dict[str, str]:
+async def _register_and_login(
+    client: httpx.AsyncClient,
+    email: str,
+    db_session: AsyncSession | None = None,
+    role: str = "customer",
+) -> dict[str, str]:
     await client.post("/auth/signup", json={"email": email, "password": "Password123!"})
+    if db_session is not None and role != "customer":
+        await db_session.execute(update(User).where(User.email == email).values(role=role))
+        await db_session.commit()
     resp = await client.post("/auth/login", json={"email": email, "password": "Password123!"})
     return {"Authorization": f"Bearer {resp.json()['access_token']}"}
 
@@ -33,7 +42,7 @@ async def test_concurrent_checkout_prevents_overselling(
     client: httpx.AsyncClient,
     db_session: AsyncSession,
 ):
-    headers_a = await _register_and_login(client, "buyer_a@example.com")
+    headers_a = await _register_and_login(client, "buyer_a@example.com", db_session=db_session, role="admin")
     headers_b = await _register_and_login(client, "buyer_b@example.com")
 
     prod_resp = await client.post(
