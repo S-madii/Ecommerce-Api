@@ -1,5 +1,6 @@
-import re
 from datetime import datetime
+import re
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
@@ -34,4 +35,13 @@ class UserRead(BaseModel):
 
 class Token(BaseModel):
     access_token: str
-    token_type: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class UserRoleUpdate(BaseModel):
+    role: Literal["customer", "admin"]

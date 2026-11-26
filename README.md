@@ -6,7 +6,7 @@ REST API for an e-commerce store built with FastAPI, PostgreSQL, Redis, Celery, 
 
 ## Features
 
-- **Authentication & Roles**: JWT login/signup with `bcrypt` password hashing and role-based access (`customer` and `admin`). Only admins can create or modify categories and products.
+- **Authentication & Roles**: JWT login/signup with `bcrypt` password hashing, Redis-backed IP rate limiting (`429 Too Many Requests`), refresh token rotation (`/auth/refresh`), immediate Redis `jti` token revocation on logout (`/auth/logout`), and role-based access (`customer` and `admin`). The first admin can be bootstrapped via `ADMIN_EMAIL` in `.env`, and admins can promote or delete user accounts.
 - **Product Catalog**: Paginated product listing with keyword search (`q`), category filtering, min/max price filters, and sorting (`newest`, `price_asc`, `price_desc`).
 - **Redis Caching**: Product details and catalog queries use a cache-aside pattern via `redis.asyncio`. Cache keys are invalidated when products are created or stock changes at checkout. If Redis is unavailable, requests fall back to PostgreSQL.
 - **Shopping Cart**: Persistent active cart per user with stock validation and automatic line-item and cart total calculation.
@@ -45,9 +45,13 @@ REST API for an e-commerce store built with FastAPI, PostgreSQL, Redis, Celery, 
 
 | Method | Path | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/auth/signup` | Public | Register a new user account |
-| `POST` | `/auth/login` | Public | Log in and receive a Bearer JWT |
+| `POST` | `/auth/signup` | Public | Register a new user account (rate-limited; auto-assigns `admin` if email matches `ADMIN_EMAIL`) |
+| `POST` | `/auth/login` | Public | Log in and receive `access_token` and `refresh_token` (rate-limited) |
+| `POST` | `/auth/refresh` | Public | Exchange a valid `refresh_token` for a new token pair (rotates & revokes old refresh token) |
+| `POST` | `/auth/logout` | Authenticated | Revoke current access token `jti` in Redis for immediate invalidation |
 | `GET` | `/auth/me` | Authenticated | Get current user profile and role |
+| `PATCH` | `/auth/users/{id}/role` | Admin | Promote or demote a user's role (`customer` / `admin`) |
+| `DELETE` | `/auth/users/{id}` | Admin | Delete a user account (`204 No Content`) |
 | `GET` | `/categories` | Public | List all categories |
 | `POST` | `/categories` | Admin | Create a category |
 | `GET` | `/products` | Public | List products (`q`, `category_id`, `min_price`, `max_price`, `sort`, `limit`, `offset`) |
@@ -62,7 +66,7 @@ REST API for an e-commerce store built with FastAPI, PostgreSQL, Redis, Celery, 
 | `GET` | `/health` | Public | App health check |
 | `GET` | `/health/db` | Public | Database connectivity check |
 
-Database schema details can be found in [docs/architecture/schema.sql](docs/architecture/schema.sql) and [docs/architecture/schema.jpg](docs/architecture/schema.jpg).
+Database schema details can be found in [docs/architecture/schema.sql](docs/architecture/schema.sql) and [docs/architecture/schema.jpg](docs/architecture/Schema.jpg).
 
 ## Getting Started
 
