@@ -5,6 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.exceptions import EmptyCartError, InsufficientStockError, CheckoutError
 from app.models import Cart, CartItem, Order, OrderItem, Payment, Product, User
 from app.services.payment import PaymentService
@@ -74,6 +75,7 @@ class OrderService:
             user_id=user_id,
             subtotal=total_amount,
             total=total_amount,
+            currency=settings.DEFAULT_CURRENCY.upper(),
             shipping_address=shipping_address,
             items=order_items_to_create,
         )
@@ -116,6 +118,7 @@ class OrderService:
             provider='stripe',
             provider_payment_id=intent.id,
             amount=order.total,
+            currency=order.currency.strip().upper(),
             status='pending',
         )
         db.add(payment)
