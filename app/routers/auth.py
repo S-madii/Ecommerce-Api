@@ -1,7 +1,7 @@
 import asyncio
 
 from bcrypt import checkpw, gensalt, hashpw
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -21,7 +21,7 @@ from app.core.security import (
 )
 from app.db import get_db
 from app.models import User
-from app.schemas import RefreshTokenRequest, Token, UserCreate, UserRead, UserRoleUpdate
+from app.schemas import RefreshTokenRequest, Token, UserCreate, UserRead, UserRoleUpdate, UserList
 
 DUMMY_HASH = hashpw(b"dummy_password", gensalt())
 router = APIRouter()
@@ -105,6 +105,42 @@ async def logout(
 @router.get("/me", response_model=UserRead)
 async def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.get("/users", response_model=UserList)
+async def list_users(
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    role: str | None = None,
+    q: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+):
+    conditions = []
+    if role:
+        conditions.append(User.role == role)
+    if q:
+        conditions.append(User.email.icontains(q, autoescape=True))
+
+    count_stmt = select(func.count()).select_from(User).where(*conditions)
+    total = await db.scalar(count_stmt) or 0
+
+    query = (
+        select(User)
+        .where(*conditions)
+        .order_by(User.id.asc())
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await db.execute(query)
+    users = result.scalars().all()
+    return UserList(
+        items=[UserRead.model_validate(u) for u in users],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
+
 
 
 @router.patch("/users/{user_id}/role", response_model=UserRead)

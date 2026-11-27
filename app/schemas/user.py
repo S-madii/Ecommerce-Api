@@ -45,3 +45,11 @@ class RefreshTokenRequest(BaseModel):
 
 class UserRoleUpdate(BaseModel):
     role: Literal["customer", "admin"]
+
+
+class UserList(BaseModel):
+    items: list[UserRead]
+    total: int
+    limit: int
+    offset: int
+

@@ -1,4 +1,4 @@
-from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserRead, UserRoleUpdate
+from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserRead, UserRoleUpdate, UserList
 from app.schemas.cart import CartItemCreate, CartItemUpdate, CartItemRead, CartRead
 from app.schemas.category import CategoryCreate, CategoryRead
 from app.schemas.product import ProductCreate, ProductRead, ProductList
@@ -8,6 +8,7 @@ from app.schemas.payment import CheckoutResponse
 __all__ = [
     "UserRead",
     "UserCreate",
+    "UserList",
     "Token",
     "RefreshTokenRequest",
     "UserRoleUpdate",

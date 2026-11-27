@@ -50,6 +50,7 @@ REST API for an e-commerce store built with FastAPI, PostgreSQL, Redis, Celery, 
 | `POST` | `/auth/refresh` | Public | Exchange a valid `refresh_token` for a new token pair (rotates & revokes old refresh token) |
 | `POST` | `/auth/logout` | Authenticated | Revoke current access token `jti` in Redis for immediate invalidation |
 | `GET` | `/auth/me` | Authenticated | Get current user profile and role |
+| `GET` | `/auth/users` | Admin | List paginated users (`q`, `role`, `limit`, `offset`) |
 | `PATCH` | `/auth/users/{id}/role` | Admin | Promote or demote a user's role (`customer` / `admin`) |
 | `DELETE` | `/auth/users/{id}` | Admin | Delete a user account (`204 No Content`) |
 | `GET` | `/categories` | Public | List all categories |

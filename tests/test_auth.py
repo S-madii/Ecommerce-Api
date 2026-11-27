@@ -125,6 +125,28 @@ async def test_auth_rate_limiting_and_admin_user_management(
     )
     member_id = user_signup.json()["id"]
 
+    # Customer forbidden to list users
+    user_login = await client.post(
+        "/auth/login",
+        json={"email": "member@example.com", "password": "Password123!"},
+    )
+    cust_headers = {"Authorization": f"Bearer {user_login.json()['access_token']}"}
+    forbidden_list = await client.get("/auth/users", headers=cust_headers)
+    assert forbidden_list.status_code == 403
+
+    # Admin lists users
+    users_resp = await client.get("/auth/users", headers=admin_headers)
+    assert users_resp.status_code == 200
+    assert users_resp.json()["total"] >= 2
+    emails = [u["email"] for u in users_resp.json()["items"]]
+    assert "boss@example.com" in emails
+    assert "member@example.com" in emails
+
+    # Admin filter by role
+    admins_only = await client.get("/auth/users", params={"role": "admin"}, headers=admin_headers)
+    assert admins_only.status_code == 200
+    assert all(u["role"] == "admin" for u in admins_only.json()["items"])
+
     role_resp = await client.patch(
         f"/auth/users/{member_id}/role",
         json={"role": "admin"},
