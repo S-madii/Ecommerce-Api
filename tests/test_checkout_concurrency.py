@@ -38,6 +38,18 @@ async def test_checkout_empty_cart_rejected(client: httpx.AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_checkout_invalid_shipping_address_rejected(client: httpx.AsyncClient):
+    headers = await _register_and_login(client, "bad_address@example.com")
+
+    resp = await client.post(
+        "/orders/checkout",
+        json={"shipping_address": {"city": "Algiers"}},  # missing required street
+        headers=headers,
+    )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_concurrent_checkout_prevents_overselling(
     client: httpx.AsyncClient,
     db_session: AsyncSession,
@@ -82,3 +94,15 @@ async def test_concurrent_checkout_prevents_overselling(
     product_in_db = await db_session.get(Product, product_id)
     assert product_in_db is not None
     assert product_in_db.stock == 0
+
+
+@pytest.mark.asyncio
+async def test_checkout_unknown_address_field_rejected(client: httpx.AsyncClient):
+    headers = await _register_and_login(client, "extra_field@example.com")
+
+    resp = await client.post(
+        "/orders/checkout",
+        json={"shipping_address": {"city": "Algiers", "street": "1 Rue", "lol": True}},
+        headers=headers,
+    )
+    assert resp.status_code == 422

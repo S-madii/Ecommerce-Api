@@ -2,7 +2,7 @@ from app.schemas.user import RefreshTokenRequest, Token, UserCreate, UserRead, U
 from app.schemas.cart import CartItemCreate, CartItemUpdate, CartItemRead, CartRead
 from app.schemas.category import CategoryCreate, CategoryRead
 from app.schemas.product import ProductCreate, ProductRead, ProductList
-from app.schemas.order import CheckoutRequest, OrderRead, OrderItemRead
+from app.schemas.order import CheckoutRequest, OrderRead, OrderItemRead, ShippingAddress
 from app.schemas.payment import CheckoutResponse
 
 __all__ = [
@@ -23,5 +23,6 @@ __all__ = [
     "CheckoutRequest",
     "OrderRead",
     "OrderItemRead",
+    "ShippingAddress",
     "CheckoutResponse",
 ]

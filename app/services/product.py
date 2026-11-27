@@ -12,6 +12,7 @@ from app.core.exceptions import ConflictError, NotFoundError
 from app.core.redis import redis_client
 from app.models import Category, Product
 from app.schemas import ProductCreate, ProductList, ProductRead
+from app.services.category import CategoryService
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +22,7 @@ class ProductService:
     @staticmethod
     async def create_product(db: AsyncSession, product_in: ProductCreate) -> Product:
         if product_in.category_id is not None:
-            result = await db.execute(select(Category).where(Category.id == product_in.category_id))
-            category = result.scalar_one_or_none()
-            if not category:
-                raise NotFoundError(detail="Category not found")
+            await CategoryService.get_category_by_id(db, product_in.category_id)
 
         new_product = Product(
             name=product_in.name,

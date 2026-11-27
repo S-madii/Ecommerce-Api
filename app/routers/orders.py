@@ -19,6 +19,6 @@ async def checkout(
     order, client_secret = await OrderService.checkout(
         db=db,
         user=current_user,
-        shipping_address=request.shipping_address,
+        shipping_address=request.shipping_address.model_dump(),
     )
     return CheckoutResponse(order=order, client_secret=client_secret)

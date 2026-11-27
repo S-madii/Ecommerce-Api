@@ -1,33 +1,24 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_admin
 from app.db import get_db
-from app.models import Category, User
+from app.models import User
 from app.schemas import CategoryCreate, CategoryRead
+from app.services import CategoryService
 
 router = APIRouter()
 
 
 @router.post("", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
-async def create_category(category: CategoryCreate, db: AsyncSession = Depends(get_db),
-                          current_user: User = Depends(require_admin)):
-    new_category = Category(name=category.name)
-    db.add(new_category)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Category with this name already exists")
-    await db.refresh(new_category)
-    return new_category
+async def create_category(
+    category: CategoryCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    return await CategoryService.create_category(db, category)
 
 
 @router.get("", response_model=list[CategoryRead])
 async def read_categories(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Category).order_by(Category.name))
-    categories = result.scalars().all()
-    return categories
+    return await CategoryService.list_categories(db)

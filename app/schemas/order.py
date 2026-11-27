@@ -6,9 +6,18 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 
+class ShippingAddress(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="forbid")
+    street: str
+    city: str
+    postal_code: str | None = None
+    country: str = "Algeria"
+    state: str | None = None
+
+
 class CheckoutRequest(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    shipping_address: dict[str, Any]
+    shipping_address: ShippingAddress
 
 
 class OrderItemRead(BaseModel):
@@ -29,7 +38,7 @@ class OrderRead(BaseModel):
     subtotal: Decimal
     shipping_amount: Decimal
     total: Decimal
-    shipping_address: dict[str, Any]
+    shipping_address: ShippingAddress
     created_at: datetime
     items: list[OrderItemRead]
     model_config = ConfigDict(from_attributes=True)
