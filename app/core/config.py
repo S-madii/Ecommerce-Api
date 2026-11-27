@@ -5,6 +5,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     DATABASE_URL: str
     REDIS_URL: str | None = None
+    DB_ECHO: bool = False
+    DEFAULT_CURRENCY: str = "USD"
     SECRET_KEY: SecretStr
     STRIPE_SECRET_KEY: SecretStr
     STRIPE_WEBHOOK_SECRET: SecretStr | None = None

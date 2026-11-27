@@ -29,7 +29,7 @@ class Order(Base):
     public_id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), unique=True, nullable=False, server_default=text("gen_random_uuid()"))
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, server_default=text("'pending'"))
-    currency: Mapped[str] = mapped_column(CHAR(3), nullable=False, server_default=text("'DZD'"))
+    currency: Mapped[str] = mapped_column(CHAR(3), nullable=False, server_default=text("'USD'"))
     subtotal: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     shipping_amount: Mapped[Decimal] = mapped_column(Numeric(12,2), nullable=False, server_default=text("'0.00'"))
     total: Mapped[Decimal] = mapped_column(Numeric(12,2), nullable=False)
@@ -81,7 +81,7 @@ class Payment(Base):
     provider: Mapped[str] = mapped_column(String(50), nullable=False)
     provider_payment_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(12,2), nullable=False)
-    currency: Mapped[str] = mapped_column(CHAR(3), nullable=False, server_default=text("'DZD'"))
+    currency: Mapped[str] = mapped_column(CHAR(3), nullable=False, server_default=text("'USD'"))
     status: Mapped[str] = mapped_column(String(30), nullable=False, server_default=text("'pending'"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()

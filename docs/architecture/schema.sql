@@ -83,7 +83,7 @@ CREATE TABLE orders (
             'cancelled',
             'refunded'
         )),
-    currency CHAR(3) NOT NULL DEFAULT 'DZD',
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
     subtotal NUMERIC(12, 2) NOT NULL CHECK (subtotal >= 0),
     shipping_amount NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (shipping_amount >= 0),
     total NUMERIC(12, 2) NOT NULL CHECK (total >= 0),
@@ -121,7 +121,7 @@ CREATE TABLE payments (
     provider VARCHAR(50) NOT NULL,
     provider_payment_id VARCHAR(255),
     amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
-    currency CHAR(3) NOT NULL DEFAULT 'DZD',
+    currency CHAR(3) NOT NULL DEFAULT 'USD',
     status VARCHAR(30) NOT NULL DEFAULT 'pending'
         CHECK (status IN (
             'pending',
